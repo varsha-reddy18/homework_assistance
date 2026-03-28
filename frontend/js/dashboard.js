@@ -212,6 +212,7 @@ function getMicBtn() {
          document.querySelector('[onclick*="startVoice"]');
 }
 
+
 /* START VOICE INPUT */
 function startVoice() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
