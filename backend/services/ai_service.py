@@ -203,32 +203,50 @@ def is_math_question(question: str) -> bool:
     q = question.strip()
     return bool(_MATH_KEYWORDS.search(q)) or bool(_PURE_MATH_RE.match(q))
 
-
 def solve_math(question: str) -> str:
     try:
         q = question.replace("^", "**").strip()
+
+        # ✅ FIX: Strip trailing "=" so "2+2=" is treated as "2+2"
+        # and "find x: 2x+3=" is not broken
+        if q.endswith("="):
+            q = q[:-1].strip()
+
         transformations = standard_transformations + (implicit_multiplication_application,)
         steps = []
         x, y, z = sp.symbols("x y z")
         local_dict = {"x": x, "y": y, "z": z}
 
+        # System of equations  e.g. "x+y=5, x-y=1"
         if "," in q and "=" in q:
             eqs = []
             for part in q.split(","):
                 if "=" not in part:
                     continue
                 left, right = part.split("=", 1)
+                # ✅ skip if either side is blank
+                if not left.strip() or not right.strip():
+                    continue
                 eqs.append(sp.Eq(
                     parse_expr(left, transformations=transformations, local_dict=local_dict),
                     parse_expr(right, transformations=transformations, local_dict=local_dict),
                 ))
-            solution = sp.solve(eqs)
-            steps.append(f"Equations: {eqs}")
-            steps.append(f"Solution → {solution}")
-            return "📘 Step-by-step Solution:\n\n" + "\n".join(steps)
+            if eqs:
+                solution = sp.solve(eqs)
+                steps.append(f"Equations: {eqs}")
+                steps.append(f"Solution → {solution}")
+                return "📘 Step-by-step Solution:\n\n" + "\n".join(steps)
 
+        # Single equation  e.g. "2x+3=7"
         if "=" in q:
             left, right = q.split("=", 1)
+            # ✅ If right side is blank after stripping "=", evaluate left as expression
+            if not right.strip():
+                expr = parse_expr(left.strip(), transformations=transformations, local_dict=local_dict)
+                result = expr.evalf()
+                steps.append(f"Expression: {left.strip()}")
+                steps.append(f"Result → {result}")
+                return "📘 Step-by-step Solution:\n\n" + "\n".join(steps) + f"\n\n✅ Answer: {result}"
             eq = sp.Eq(
                 parse_expr(left, transformations=transformations, local_dict=local_dict),
                 parse_expr(right, transformations=transformations, local_dict=local_dict),
@@ -240,6 +258,7 @@ def solve_math(question: str) -> str:
             steps.append(f"Solution → {solution}")
             return "📘 Step-by-step Solution:\n\n" + "\n".join(steps)
 
+        # Inequality
         if any(op in q for op in ["<", ">", "<=", ">="]):
             expr = parse_expr(q, transformations=transformations, local_dict=local_dict)
             solution = sp.solve_univariate_inequality(expr)
@@ -247,6 +266,7 @@ def solve_math(question: str) -> str:
             steps.append(f"Solution → {solution}")
             return "📘 Step-by-step Solution:\n\n" + "\n".join(steps)
 
+        # Algebraic expression with letters
         if re.search(r"[a-zA-Z]", q):
             expr = parse_expr(q, transformations=transformations, local_dict=local_dict)
             steps.append(f"Expression: {expr}")
@@ -255,12 +275,14 @@ def solve_math(question: str) -> str:
             steps.append(f"Factored  → {sp.factor(expr)}")
             return "📘 Step-by-step Solution:\n\n" + "\n".join(steps)
 
+        # Pure numeric (BODMAS)  e.g. "2+2", "10*5/2"
         if re.fullmatch(r"[\d\s\+\-\*/(). ]+", q):
             expr = parse_expr(q)
             steps.append(f"Expression: {q}")
             steps.append(f"BODMAS Result → {expr}")
             return "📘 Step-by-step Solution:\n\n" + "\n".join(steps) + f"\n\n✅ Answer: {expr}"
 
+        # Advanced (logs, roots, trig)
         expr = parse_expr(q, transformations=transformations, local_dict=local_dict)
         steps.append(f"Expression: {expr}")
         steps.append(f"Evaluated  → {expr.evalf()}")
@@ -269,7 +291,6 @@ def solve_math(question: str) -> str:
     except Exception as e:
         print("Math Error:", e)
         return "❌ Could not solve the math problem. Please check the expression."
-
 
 # -----------------------------------------------------------------------
 # WIKIPEDIA
