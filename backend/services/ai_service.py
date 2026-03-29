@@ -16,12 +16,18 @@ from sympy.parsing.sympy_parser import (
 device = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_NAME = "google/flan-t5-small"
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-model = AutoModelForSeq2SeqLM.from_pretrained(
-    MODEL_NAME,
-    low_cpu_mem_usage=True
-).to(device)
-model.eval()
+tokenizer = None
+model = None
+
+def load_main_model():
+    global tokenizer, model
+    if tokenizer is None or model is None:
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+        model = AutoModelForSeq2SeqLM.from_pretrained(
+            MODEL_NAME,
+            low_cpu_mem_usage=True
+        ).to(device)
+        model.eval()
 # -----------------------------------------------------------------------
 # TRANSLATION
 # -----------------------------------------------------------------------
