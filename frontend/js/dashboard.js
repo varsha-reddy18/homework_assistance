@@ -114,7 +114,6 @@ function loadChat(chatId){
   });
   chatArea.scrollTop = chatArea.scrollHeight;
 }
-
 /* ================= SUBJECT MAP (shared) ================= */
 const SUBJECT_MAP = {
   "maths": "math", "math": "math", "physics": "physics",
@@ -123,48 +122,64 @@ const SUBJECT_MAP = {
   "social": "english", "computer": "english"
 };
 
-/* ================= LOCAL FALLBACK LOOKUP ================= */
+/* ================= LOCAL FALLBACK LOOKUP (FIXED) ================= */
 function lookupFallback(question) {
+  if (!selectedSubject) return null;
+
+  // FIX: normalize question — lowercase, remove quotes, collapse spaces, strip trailing =/?
   const q = question.toLowerCase().trim()
-    .replace(/\s+/g, "")   // remove all spaces for math expressions like "2+2"
-    .replace(/[=?]+$/, ""); // strip trailing = or ?
+    .replace(/['"]/g, "")        // remove quotes like "2+2"
+    .replace(/\s+/g, " ")        // normalize spaces (keep spaces for phrase matching)
+    .replace(/[=?]+$/, "")       // strip trailing = or ?
+    .trim();
+
+  // Also a space-stripped version for math expressions like "2 + 2"
+  const qNoSpace = q.replace(/\s+/g, "");
 
   const normalizedSubject = SUBJECT_MAP[selectedSubject.toLowerCase()] || selectedSubject.toLowerCase();
   const bank = fallback_qa[normalizedSubject] || [];
 
   for (let item of bank) {
-    const key = item[0].toLowerCase().trim().replace(/\s+/g, "");
-    // exact match (space-stripped), or one contains the other
-    if (q === key || q.includes(key) || key.includes(q)) {
+    const key = item[0].toLowerCase().trim().replace(/['"]/g, "");
+    const keyNoSpace = key.replace(/\s+/g, "");
+
+    if (
+      q === key ||
+      qNoSpace === keyNoSpace ||
+      q.includes(key) ||
+      key.includes(q) ||
+      qNoSpace.includes(keyNoSpace) ||
+      keyNoSpace.includes(qNoSpace)
+    ) {
       return item[1];
     }
   }
   return null;
 }
 
-/* ================= SAFE MATH EVALUATOR ================= */
+/* ================= SAFE MATH EVALUATOR (FIXED) ================= */
 function tryMathEval(expr) {
   try {
-    // Only allow safe math characters
-    const safe = expr.replace(/\s+/g, "").replace(/[^0-9+\-*/.()%^]/g, "");
+    // FIX: strip quotes before evaluating
+    const cleaned = expr.replace(/['"]/g, "").replace(/[=?]+$/g, "").trim();
+    const safe = cleaned.replace(/\s+/g, "").replace(/[^0-9+\-*/.()%^]/g, "");
     if (!safe || safe.length === 0) return null;
-    // Replace ^ with ** for exponentiation
     const prepared = safe.replace(/\^/g, "**");
     // eslint-disable-next-line no-new-func
     const result = Function('"use strict"; return (' + prepared + ')')();
     if (typeof result === "number" && isFinite(result)) {
-      // Format: avoid floating point noise
       const rounded = Math.round(result * 1e10) / 1e10;
-      return `📘 Step-by-step Solution:<br>Expression: ${expr.trim()}<br>BODMAS Result → ${rounded}<br>✅ Answer: ${rounded}`;
+      return `📘 Step-by-step Solution:<br>Expression: ${cleaned}<br>BODMAS Result → ${rounded}<br>✅ Answer: ${rounded}`;
     }
   } catch (e) { /* not a math expression */ }
   return null;
 }
 
-/* ================= DETECT IF QUESTION IS PURE MATH ================= */
+/* ================= DETECT IF QUESTION IS PURE MATH (FIXED) ================= */
 function isMathExpression(q) {
-  // looks like arithmetic: digits + operators, possibly with spaces
-  return /^[\d\s+\-*/().^%=?]+$/.test(q.trim());
+  // FIX: strip quotes first, then check for math characters
+  const cleaned = q.replace(/['"]/g, "").trim();
+  return /^[\d\s+\-*/().^%=?]+$/.test(cleaned);
 }
 
 /* ================= ANTHROPIC API CALL ================= */
@@ -186,6 +201,16 @@ Format answers with line breaks where needed. Keep answers educational and accur
   return data.content.map(item => item.type === "text" ? item.text : "").filter(Boolean).join("\n");
 }
 
+/* ================= FORMAT ANSWER TEXT ================= */
+function formatAnswer(text) {
+  return text
+    .replace(/\n\n/g, "<br><br>")
+    .replace(/\n/g, "<br>")
+    .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
+    .replace(/📘/g, "📘 ")
+    .replace(/✅/g, "<br>✅ ");
+}
+
 /* ================= SAVE & DISPLAY ANSWER ================= */
 function displayAnswer(chatArea, question, answer, loading) {
   if (loading) loading.remove();
@@ -199,131 +224,21 @@ function displayAnswer(chatArea, question, answer, loading) {
   renderChatList();
 }
 
-/* ================= FORMAT ANSWER TEXT ================= */
-function formatAnswer(text) {
-  return text
-    .replace(/\n\n/g, "<br><br>")
-    .replace(/\n/g, "<br>")
-    .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
-    .replace(/📘/g, "📘 ")
-    .replace(/✅/g, "<br>✅ ");
+/* ================= OFFLINE SAVE & SHOW HELPER ================= */
+function saveAndShowOffline(chatArea, question, msg, loading) {
+  if (loading) loading.remove();
+  const formatted = formatAnswer(msg);
+  chatArea.innerHTML += `<div class="ai-msg">🤖 ${formatted}</div>`;
+  speakText(msg.replace(/<[^>]*>/g, ""));
+  const key = selectedSubject + "_" + currentChatId;
+  const chatData = JSON.parse(localStorage.getItem(key)) || [];
+  chatData.push({ q: question, a: formatted });
+  localStorage.setItem(key, JSON.stringify(chatData));
+  renderChatList();
+  chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-/* ================= ENVIRONMENT DETECTION ================= */
-const IS_FILE_PROTOCOL = window.location.protocol === "file:";
-
-/* ================= SMART OFFLINE ANSWER GENERATOR ================= */
-function generateSmartOfflineAnswer(question, subject) {
-  const q = question.toLowerCase().trim();
-
-  // Try math eval one more time
-  if (isMathExpression(question)) {
-    const r = tryMathEval(q.replace(/[=?]+$/g, ""));
-    if (r) return r;
-  }
-
-  const subjectKey = SUBJECT_MAP[subject.toLowerCase()] || subject.toLowerCase();
-
-  const keywordMap = {
-    math: [
-      [/formula/,                  "Common formulas: Area of circle = πr², Pythagoras = a²+b²=c², SI = PTR/100, Quadratic = ax²+bx+c=0"],
-      [/prime/,                    "A prime number is divisible only by 1 and itself. Examples: 2, 3, 5, 7, 11, 13..."],
-      [/even|odd/,                 "Even numbers are divisible by 2 (2,4,6...). Odd numbers are not divisible by 2 (1,3,5...)."],
-      [/square.?root|√/,           "Square root finds a number that when multiplied by itself gives the original. √144=12, √25=5"],
-      [/percentage|%/,             "Percentage = (Part ÷ Whole) × 100"],
-      [/fraction/,                 "A fraction represents part of a whole. Example: 3/4 means 3 parts out of 4."],
-      [/lcm/,                      "LCM = Least Common Multiple. LCM of 4 & 6 = 12"],
-      [/hcf|gcd/,                  "HCF = Highest Common Factor. HCF of 12 & 18 = 6"],
-      [/ratio/,                    "Ratio compares two quantities. Example: 3:2 means 3 of one for every 2 of another."],
-      [/mean|average/,             "Mean = Sum of all values ÷ Number of values"],
-      [/median/,                   "Median = Middle value when data is sorted in order."],
-      [/mode/,                     "Mode = The value that appears most often in a data set."],
-      [/probability/,              "Probability = Favourable outcomes ÷ Total outcomes. Range: 0 to 1."],
-      [/pythagoras/,               "Pythagoras theorem: a² + b² = c² (for right-angled triangles)"],
-      [/quadratic/,                "Quadratic equation: ax² + bx + c = 0. Solve using formula: x = (-b ± √(b²-4ac)) / 2a"],
-      [/what is|define|meaning/,   "Please type a specific Maths question — e.g. 'What is (a+b)²' or 'Solve 2x + 3 = 11'"],
-    ],
-    physics: [
-      [/newton|law.of.motion/,     "Newton's Laws: 1st=Inertia (no force = no change), 2nd=F=ma, 3rd=Action & Reaction are equal & opposite"],
-      [/gravity|gravitation/,      "Gravity = force attracting objects toward Earth. g = 9.8 m/s². F = mg"],
-      [/speed|velocity/,           "Speed = Distance ÷ Time. Velocity = Speed with direction. Both in m/s."],
-      [/acceleration/,             "Acceleration = Change in Velocity ÷ Time. a = (v-u)/t. Unit: m/s²"],
-      [/force/,                    "Force = Mass × Acceleration (F = ma). Unit: Newton (N)"],
-      [/energy/,                   "KE = ½mv², PE = mgh, Total Energy is conserved. Unit: Joule (J)"],
-      [/pressure/,                 "Pressure = Force ÷ Area. P = F/A. Unit: Pascal (Pa)"],
-      [/work/,                     "Work = Force × Distance × cos(θ). W = Fd. Unit: Joule (J)"],
-      [/power/,                    "Power = Work ÷ Time. P = W/T. Unit: Watt (W)"],
-      [/wave|light|sound/,         "Light speed = 3×10⁸ m/s. Sound speed in air ≈ 340 m/s. Sound fastest in solids."],
-      [/ohm|resistance|circuit/,   "Ohm's Law: V = IR. Voltage = Current × Resistance. Unit of R: Ohm (Ω)"],
-      [/lens|refraction|mirror/,   "Convex lens = converging. Concave lens = diverging. Myopia uses concave lens."],
-    ],
-    chemistry: [
-      [/atom|atomic/,              "Atom: smallest unit of matter. Has protons(+), neutrons(neutral), electrons(-) in shells."],
-      [/periodic.table|element/,   "Periodic table has 118 elements organized by atomic number. Groups & Periods arrange properties."],
-      [/acid|base|ph/,             "pH scale 0-14. pH<7 = Acid (HCl), pH=7 = Neutral (water), pH>7 = Base (NaOH)."],
-      [/bond|compound|molecule/,   "Ionic bonds: metal+non-metal (NaCl). Covalent bonds: non-metal+non-metal (H₂O)."],
-      [/oxidation|reduction|redox/,"Oxidation = loss of electrons. Reduction = gain of electrons. Remember: OIL RIG"],
-      [/valency/,                  "Valency = combining capacity of an element. H=1, O=2, N=3, C=4, Na=1, Cl=1"],
-      [/reaction/,                 "Types: Combination (A+B→AB), Decomposition (AB→A+B), Displacement, Double Displacement"],
-      [/formula|chemical/,         "Common formulas: Water=H₂O, Salt=NaCl, CO₂=Carbon dioxide, H₂SO₄=Sulphuric acid"],
-    ],
-    biology: [
-      [/cell/,                     "Cell = basic unit of life. Plant cells have: cell wall, chloroplast. Animal cells have: centriole."],
-      [/photosynthesis/,           "Photosynthesis: 6CO₂ + 6H₂O + sunlight → C₆H₁₂O₆ + 6O₂. Happens in chloroplasts (leaves)."],
-      [/respiration/,              "Aerobic: C₆H₁₂O₆ + 6O₂ → 6CO₂ + 6H₂O + 38ATP. Anaerobic: glucose → lactic acid (no oxygen)."],
-      [/dna|gene|chromosome/,      "DNA = Deoxyribonucleic Acid. Carries genetic info. Humans have 46 chromosomes (23 pairs)."],
-      [/heart|blood|circulat/,     "Heart has 4 chambers. RBC carries O₂. WBC fights infection. Platelets help clot blood."],
-      [/digestive|digest/,         "Digestion: Mouth→Oesophagus→Stomach→Small Intestine→Large Intestine→Rectum→Anus"],
-      [/nervous|brain|neuron/,     "Brain = cerebrum+cerebellum+medulla. Neurons carry nerve impulses. Reflex arc is automatic."],
-      [/ecosystem|habitat/,        "Ecosystem = community of living things + their environment. Producers→Consumers→Decomposers"],
-      [/enzyme/,                   "Enzymes are biological catalysts. They speed up reactions without being used up. Eg: Amylase, Pepsin"],
-    ],
-    english: [
-      [/noun/,                     "Noun: name of person, place, thing or idea. Types: Common, Proper, Abstract, Collective."],
-      [/verb/,                     "Verb: action or state word. Examples: run, jump, is, think. Verbs have tenses."],
-      [/adjective/,                "Adjective: describes a noun. Examples: big, red, happy, beautiful, tall."],
-      [/adverb/,                   "Adverb: modifies verb, adjective or another adverb. Examples: quickly, very, silently, always."],
-      [/pronoun/,                  "Pronoun: replaces a noun. Examples: I, you, he, she, it, they, we."],
-      [/preposition/,              "Preposition: shows relationship. Examples: in, on, at, under, between, above, beside."],
-      [/conjunction/,              "Conjunction: joins words or clauses. FANBOYS: For, And, Nor, But, Or, Yet, So."],
-      [/tense/,                    "3 main tenses: Present (I go / I am going / I have gone), Past (I went), Future (I will go)"],
-      [/synonym/,                  "Synonym = word with similar meaning. Fast→Quick, Happy→Joyful, Big→Large, Sad→Unhappy."],
-      [/antonym/,                  "Antonym = word with opposite meaning. Fast→Slow, Happy→Sad, Big→Small, Hot→Cold."],
-      [/sentence/,                 "A sentence needs Subject + Verb + (Object). Simple, Compound, Complex, Compound-Complex."],
-      [/voice|active|passive/,     "Active: Subject does the action (Ram ate food). Passive: Subject receives action (Food was eaten by Ram)."],
-      [/article/,                  "Articles: 'a' (before consonant sounds), 'an' (before vowel sounds), 'the' (specific/known noun)."],
-    ],
-    telugu: [
-      [/నామవాచకం|noun/,            "నామవాచకం (Noun): వ్యక్తి, స్థలం, వస్తువు పేరు. ఉదా: రాముడు, హైదరాబాద్, పుస్తకం"],
-      [/క్రియ|verb/,               "క్రియ (Verb): చర్యను చూపించే పదం. ఉదా: చదువు, ఆడు, నడు"],
-      [/వ్యాకరణం|grammar/,         "తెలుగు వ్యాకరణంలో నామవాచకం, సర్వనామం, విశేషణం, క్రియ ప్రధానమైనవి."],
-    ],
-    hindi: [
-      [/संज्ञा|noun/,              "संज्ञा (Noun): किसी व्यक्ति, स्थान या वस्तु का नाम। उदा: राम, दिल्ली, किताब"],
-      [/क्रिया|verb/,              "क्रिया (Verb): काम को दर्शाने वाला शब्द। उदा: खाना, पीना, पढ़ना"],
-      [/व्याकरण|grammar/,          "हिंदी व्याकरण में संज्ञा, सर्वनाम, विशेषण, क्रिया मुख्य हैं।"],
-    ],
-  };
-
-  const pairs = keywordMap[subjectKey] || [];
-  for (const [pattern, answer] of pairs) {
-    if (pattern.test(q)) return answer;
-  }
-
-  // Generic per-subject tip
-  const tips = {
-    math:      "💡 Try: 'What is Pythagoras theorem?' or type a calculation like '15 × 4 + 6'",
-    physics:   "💡 Try: 'What is Newton's first law?' or 'What is the formula for force?'",
-    chemistry: "💡 Try: 'What is an atom?' or 'What is the pH of an acid?'",
-    biology:   "💡 Try: 'What is photosynthesis?' or 'Explain the digestive system'",
-    english:   "💡 Try: 'What is a noun?' or 'Explain active and passive voice'",
-    telugu:    "💡 అడగండి: 'నామవాచకం అంటే ఏమిటి?' లేదా 'క్రియ అంటే ఏమిటి?'",
-    hindi:     "💡 पूछें: 'संज्ञा क्या है?' या 'क्रिया किसे कहते हैं?'",
-  };
-  return tips[subjectKey] || `💡 Please ask a specific question about ${subject}. I'm here to help!`;
-}
-
-/* ================= ASK AI ================= */
+/* ================= ASK AI (FULLY FIXED) ================= */
 async function askAI() {
   const questionInput = document.getElementById("question");
   const fileInput     = document.getElementById("imageInput");
@@ -343,17 +258,10 @@ async function askAI() {
   chatArea.scrollTop = chatArea.scrollHeight;
   questionInput.value = "";
 
-  // ── STEP 1: Always check fallback_qa first (instant, zero network) ──
-  const localAnswer = lookupFallback(question);
-  if (localAnswer) {
-    displayAnswer(chatArea, question, formatAnswer(localAnswer), loading);
-    chatArea.scrollTop = chatArea.scrollHeight;
-    return;
-  }
-
-  // ── STEP 2: Math expression → evaluate locally ──
+  // ── STEP 1: Math expression → evaluate locally (FIRST, before any lookup) ──
+  // FIX: Run math eval FIRST so "2+2", '"2+2"', "2+2=" all work instantly
   if (isMathExpression(question)) {
-    const mathResult = tryMathEval(question.replace(/[=?]+$/g, ""));
+    const mathResult = tryMathEval(question);
     if (mathResult) {
       displayAnswer(chatArea, question, mathResult, loading);
       chatArea.scrollTop = chatArea.scrollHeight;
@@ -361,22 +269,29 @@ async function askAI() {
     }
   }
 
-  // ── STEP 3: file:// protocol → ALL network blocked by browser, use smart offline ──
-  if (window.location.protocol === "file:") {
-    loading.remove();
-    const msg = generateSmartOfflineAnswer(question, selectedSubject);
-    chatArea.innerHTML += `<div class="ai-msg">🤖 ${msg}</div>`;
-    speakText(msg.replace(/<[^>]*>/g, ""));
-    const key = selectedSubject + "_" + currentChatId;
-    const chatData = JSON.parse(localStorage.getItem(key)) || [];
-    chatData.push({ q: question, a: msg });
-    localStorage.setItem(key, JSON.stringify(chatData));
-    renderChatList();
+  // ── STEP 2: Check fallback_qa (keyword/phrase database) ──
+  const localAnswer = lookupFallback(question);
+  if (localAnswer) {
+    displayAnswer(chatArea, question, formatAnswer(localAnswer), loading);
     chatArea.scrollTop = chatArea.scrollHeight;
     return;
   }
 
-  // ── STEP 4: Try backend (only reachable when served via http://) ──
+  // ── STEP 3: Smart offline keyword match ──
+  const smartOffline = generateSmartOfflineAnswer(question, selectedSubject);
+  // Use smart offline if it returns a real matched answer (not just a "💡 Try:" tip)
+  if (smartOffline && !smartOffline.startsWith("💡")) {
+    saveAndShowOffline(chatArea, question, smartOffline, loading);
+    return;
+  }
+
+  // ── STEP 4: file:// protocol → all network blocked by browser ──
+  if (window.location.protocol === "file:") {
+    saveAndShowOffline(chatArea, question, smartOffline, loading);
+    return;
+  }
+
+  // ── STEP 5: Try backend (only reachable when served via http://) ──
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 4000);
@@ -395,23 +310,15 @@ async function askAI() {
     displayAnswer(chatArea, question, formatAnswer(data.answer || "⚠ No answer found"), loading);
 
   } catch (backendError) {
-    // ── STEP 5: Backend offline → try Anthropic API ──
+    // ── STEP 6: Backend offline → try Anthropic API ──
     console.log("Backend offline, trying Anthropic API...", backendError.message);
     try {
       const aiText = await askAnthropicAPI(question, selectedSubject);
       displayAnswer(chatArea, question, formatAnswer(aiText), loading);
     } catch (apiError) {
-      // ── STEP 6: All network failed → smart offline ──
+      // ── STEP 7: All network failed → smart offline tip as last resort ──
       console.log("All network failed:", apiError.message);
-      loading.remove();
-      const msg = generateSmartOfflineAnswer(question, selectedSubject);
-      chatArea.innerHTML += `<div class="ai-msg">🤖 ${msg}</div>`;
-      speakText(msg.replace(/<[^>]*>/g, ""));
-      const key = selectedSubject + "_" + currentChatId;
-      const chatData = JSON.parse(localStorage.getItem(key)) || [];
-      chatData.push({ q: question, a: msg });
-      localStorage.setItem(key, JSON.stringify(chatData));
-      renderChatList();
+      saveAndShowOffline(chatArea, question, smartOffline, loading);
     }
   }
 
@@ -1409,7 +1316,7 @@ const fallback_qa = {
     ["tense", "Tense shows time of action"]
   ],
 
-  
+
   telugu: [
     ["2 + 2 ఎంత", "2 + 2 = 4"],
     ["ప్రైమ్ సంఖ్య", "1 మరియు తనతో మాత్రమే భాగించబడే సంఖ్య"],

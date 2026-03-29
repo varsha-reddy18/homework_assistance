@@ -41,7 +41,7 @@ async function signup() {
     users[email] = password;
     localStorage.setItem("users", JSON.stringify(users));
 
-    alert("Signup successful (Offline Mode)");
+    alert("Signup successful");
     window.location.href = "login.html";
   }
 }
@@ -83,7 +83,7 @@ async function login() {
       localStorage.setItem("user_id", email);
       window.location.href = "dashboard.html";
     } else {
-      alert("Invalid credentials (Offline Mode)");
+      alert("Invalid credentials");
     }
   }
 }
