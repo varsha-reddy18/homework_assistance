@@ -1,6 +1,8 @@
+const BACKEND = "http://127.0.0.1:8000";
+
 async function signup() {
-  const email = document.getElementById("email")?.value.trim();
-  const password = document.getElementById("password")?.value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
   if (!email || !password) {
     alert("Please enter email and password");
@@ -8,7 +10,7 @@ async function signup() {
   }
 
   try {
-    const res = await fetch("http://127.0.0.1:8000/signup", {
+    const res = await fetch(`${BACKEND}/signup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -19,31 +21,34 @@ async function signup() {
     const data = await res.json();
 
     if (res.ok) {
-      alert("Signup successful!");
-
-      // ✅ optional: store user
-      if (data.user) {
-        localStorage.setItem("user", JSON.stringify(data.user));
-        localStorage.setItem("user_id", data.user.email || email);
-      }
-
-      // ✅ DIRECTLY GO TO DASHBOARD
-      window.location.href = "dashboard.html";
-
+      alert(data.message || "Signup successful");
+      window.location.href = "login.html";
+      return;
     } else {
-      alert(data.detail || "Signup failed");
+      alert(data.detail || data.message || "Signup failed");
+      return;
     }
 
   } catch (error) {
-    console.error("Signup error:", error);
-    alert("Server error. Try again.");
+    // ✅ FALLBACK SIGNUP
+    let users = JSON.parse(localStorage.getItem("users")) || {};
+
+    if (users[email]) {
+      alert("User already exists (Offline Mode)");
+      return;
+    }
+
+    users[email] = password;
+    localStorage.setItem("users", JSON.stringify(users));
+
+    alert("Signup successful (Offline Mode)");
+    window.location.href = "login.html";
   }
 }
 
-
 async function login() {
-  const email = document.getElementById("email")?.value.trim();
-  const password = document.getElementById("password")?.value.trim();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
   if (!email || !password) {
     alert("Please enter email and password");
@@ -51,7 +56,7 @@ async function login() {
   }
 
   try {
-    const res = await fetch("http://127.0.0.1:8000/login", {
+    const res = await fetch(`${BACKEND}/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -61,23 +66,24 @@ async function login() {
 
     const data = await res.json();
 
-    if (res.ok) {
-      alert("Login successful!");
-
-      // ✅ Store token + user
-      localStorage.setItem("access_token", data.access_token || "");
-      localStorage.setItem("user", JSON.stringify(data.user || {}));
-      localStorage.setItem("user_id", data.user?.email || email);
-
-      // ✅ OPEN DASHBOARD
+    if (res.ok && data.message === "Login successful") {
+      localStorage.setItem("user_id", email);
       window.location.href = "dashboard.html";
-
+      return;
     } else {
-      alert(data.detail || "Invalid email or password");
+      alert(data.detail || data.message || "Invalid credentials");
+      return;
     }
 
   } catch (error) {
-    console.error("Login error:", error);
-    alert("Server connection failed.");
+    // ✅ FALLBACK LOGIN
+    let users = JSON.parse(localStorage.getItem("users")) || {};
+
+    if (users[email] === password) {
+      localStorage.setItem("user_id", email);
+      window.location.href = "dashboard.html";
+    } else {
+      alert("Invalid credentials (Offline Mode)");
+    }
   }
 }
