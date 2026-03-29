@@ -14,12 +14,14 @@ from sympy.parsing.sympy_parser import (
 # LOAD AI MODEL
 # -----------------------------------------------------------------------
 device = "cuda" if torch.cuda.is_available() else "cpu"
-MODEL_NAME = "google/flan-t5-base"
+MODEL_NAME = "google/flan-t5-small"
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME).to(device)
+model = AutoModelForSeq2SeqLM.from_pretrained(
+    MODEL_NAME,
+    low_cpu_mem_usage=True
+).to(device)
 model.eval()
-
 # -----------------------------------------------------------------------
 # TRANSLATION
 # -----------------------------------------------------------------------

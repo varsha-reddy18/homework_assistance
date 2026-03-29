@@ -5,10 +5,10 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 grammar_tokenizer = AutoTokenizer.from_pretrained("vennify/t5-base-grammar-correction")
 grammar_model = AutoModelForSeq2SeqLM.from_pretrained(
-    "vennify/t5-base-grammar-correction"
+    "vennify/t5-base-grammar-correction",
+    low_cpu_mem_usage=True
 ).to(device)
 grammar_model.eval()
-
 
 def grammar_check(text: str):
     # This model works best with the "grammar: " prefix

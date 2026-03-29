@@ -5,7 +5,6 @@ sympy
 requests
 beautifulsoup4
 wikipedia
-torch
 transformers
 sentencepiece
 python-multipart
@@ -16,4 +15,5 @@ pytesseract
 PyMuPDF
 pydantic[email]
 deep-translator
-opencv-python
+opencv-python-headless
+torch==2.2.2
