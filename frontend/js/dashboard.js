@@ -17,8 +17,6 @@ function showSection(id){
 
 let isLoading = false;
 
-
-// ADD THIS
 const API_BASE = "https://varshareddy18-ai-homework-assistance.hf.space";
 
 function updateStreak(){
@@ -93,297 +91,6 @@ function loadChat(chatId){
 }
 
 /* ================================================================
-   UNIFIED Q&A DATABASE  (object-based for fast lookup)
-   ================================================================ */
-const qaDatabase = {
-  math: {
-    "2+2": "2 + 2 = 4", "2 + 2": "2 + 2 = 4", "2+2=": "2 + 2 = 4",
-    "what is pi": "π (Pi) ≈ 3.14159. It is the ratio of a circle's circumference to its diameter.",
-    "value of pi": "The value of π (Pi) ≈ 3.14159265...",
-    "what is pythagoras": "Pythagoras theorem: In a right-angled triangle, a² + b² = c², where c is the hypotenuse.",
-    "pythagoras theorem": "Pythagoras theorem: a² + b² = c²",
-    "what is (a+b)2": "(a+b)² = a² + 2ab + b²",
-    "(a+b)^2": "(a+b)² = a² + 2ab + b²",
-    "a+b whole square": "(a+b)² = a² + 2ab + b²",
-    "what is (a-b)2": "(a-b)² = a² - 2ab + b²",
-    "(a-b)^2": "(a-b)² = a² - 2ab + b²",
-    "solve 2x+3=11": "2x + 3 = 11 → 2x = 8 → x = 4",
-    "2x+3=11": "2x + 3 = 11 → 2x = 8 → x = 4",
-    "x+7=12": "x + 7 = 12 → x = 5",
-    "5x=20": "5x = 20 → x = 4",
-    "quadratic formula": "Quadratic formula: x = (-b ± √(b²-4ac)) / 2a",
-    "what is quadratic": "A quadratic equation has the form ax² + bx + c = 0.",
-    "quadratic equation": "A quadratic equation: ax² + bx + c = 0. Solve by factoring or quadratic formula.",
-    "area of circle": "Area of a circle = πr²  (r = radius)",
-    "area of rectangle": "Area of rectangle = length × breadth",
-    "area of triangle": "Area of triangle = ½ × base × height",
-    "perimeter of rectangle": "Perimeter of rectangle = 2(l + b)",
-    "circumference of circle": "Circumference = 2πr",
-    "what is hcf": "HCF = Highest Common Factor — the largest number dividing two numbers exactly. E.g. HCF(12,18) = 6",
-    "what is lcm": "LCM = Least Common Multiple — smallest number divisible by both. E.g. LCM(4,6) = 12",
-    "lcm of 4 and 6": "LCM of 4 and 6 = 12",
-    "hcf of 12 and 18": "HCF of 12 and 18 = 6",
-    "what is mean": "Mean = Sum of all values ÷ Number of values",
-    "what is median": "Median = The middle value when data is arranged in order.",
-    "what is mode": "Mode = The value that appears most often in a data set.",
-    "what is probability": "Probability = Favourable outcomes ÷ Total outcomes. Range: 0 to 1.",
-    "what is percentage": "Percentage = (Part ÷ Whole) × 100",
-    "simple interest formula": "Simple Interest = (P × T × R) / 100",
-    "what is fraction": "A fraction represents a part of a whole. Example: 3/4 means 3 parts out of 4.",
-    "what is ratio": "A ratio compares two quantities. Example: 3:2 means 3 for every 2.",
-    "what is prime number": "A prime number is divisible only by 1 and itself. Examples: 2, 3, 5, 7, 11...",
-    "prime number": "A prime number is divisible only by 1 and itself. Examples: 2, 3, 5, 7, 11...",
-    "what is even number": "Even numbers are divisible by 2. Examples: 2, 4, 6, 8...",
-    "what is odd number": "Odd numbers are NOT divisible by 2. Examples: 1, 3, 5, 7...",
-    "square root of 144": "√144 = 12", "square root of 25": "√25 = 5", "square root of 64": "√64 = 8",
-    "what is slope": "Slope = (y₂ - y₁) / (x₂ - x₁)",
-    "slope formula": "Slope = (y₂ - y₁) / (x₂ - x₁)",
-    "what is matrix": "A matrix is a rectangular array of numbers arranged in rows and columns.",
-    "matrix": "A matrix is a rectangular array of numbers.",
-    "mean": "Mean = Sum of all values ÷ Number of values",
-    "probability": "Probability = Favourable outcomes ÷ Total outcomes. Range: 0 to 1.",
-  },
-  physics: {
-    "what is force": "Force = Mass × Acceleration (F = ma). Unit: Newton (N).",
-    "force": "Force = Mass × Acceleration (F = ma). Unit: Newton (N).",
-    "formula for force": "F = ma (Force = mass × acceleration). Unit: Newton.",
-    "what is velocity": "Velocity is speed in a specific direction. Unit: m/s.",
-    "velocity": "Velocity is speed in a specific direction. Unit: m/s.",
-    "what is speed": "Speed = Distance ÷ Time. Unit: m/s.",
-    "speed formula": "Speed = Distance ÷ Time",
-    "what is acceleration": "Acceleration = Change in Velocity ÷ Time  (a = (v-u)/t). Unit: m/s².",
-    "acceleration": "Acceleration = Change in Velocity ÷ Time. a = (v-u)/t. Unit: m/s².",
-    "what is newton first law": "An object remains at rest or in motion unless acted upon by an external force.",
-    "newton first law": "An object remains at rest or in motion unless acted upon by an external force.",
-    "newton's first law": "An object remains at rest or in motion unless acted upon by an external force.",
-    "what is newton second law": "F = ma. Force equals mass times acceleration.",
-    "newton second law": "F = ma — Force = mass × acceleration.",
-    "newton's second law": "F = ma — Force = mass × acceleration.",
-    "what is newton third law": "For every action there is an equal and opposite reaction.",
-    "newton third law": "For every action there is an equal and opposite reaction.",
-    "newton's third law": "For every action there is an equal and opposite reaction.",
-    "newton's laws": "1st Law: Inertia — objects stay at rest/motion unless force acts.\n2nd Law: F = ma\n3rd Law: Every action has equal & opposite reaction.",
-    "newtons laws": "1st Law: Inertia — objects stay at rest/motion unless force acts.\n2nd Law: F = ma\n3rd Law: Every action has equal & opposite reaction.",
-    "what is gravity": "Gravity is the force attracting objects toward Earth. g = 9.8 m/s². F = mg.",
-    "gravity": "Gravity is the force attracting objects toward Earth. g = 9.8 m/s². F = mg.",
-    "what is g": "g = acceleration due to gravity = 9.8 m/s² on Earth's surface.",
-    "value of g": "g = 9.8 m/s² (approximately 10 m/s²) on Earth.",
-    "what is work": "Work = Force × Distance. W = Fd. Unit: Joule (J).",
-    "work formula": "Work = Force × Distance. Unit: Joule.",
-    "what is power": "Power = Work ÷ Time. P = W/T. Unit: Watt (W).",
-    "power formula": "Power = Work ÷ Time. Unit: Watt (W).",
-    "what is energy": "Energy = ability to do work. KE = ½mv², PE = mgh. Unit: Joule.",
-    "energy": "Energy = ability to do work. KE = ½mv², PE = mgh. Unit: Joule.",
-    "what is pressure": "Pressure = Force ÷ Area. P = F/A. Unit: Pascal (Pa).",
-    "pressure": "Pressure = Force ÷ Area. P = F/A. Unit: Pascal (Pa).",
-    "ohm's law": "Ohm's Law: V = IR (Voltage = Current × Resistance).",
-    "what is ohms law": "Ohm's Law: V = IR. Voltage = Current × Resistance. Unit of R: Ohm (Ω).",
-    "speed of light": "Speed of light = 3 × 10⁸ m/s.",
-    "speed of sound": "Speed of sound in air ≈ 340 m/s. Fastest in solids.",
-    "what is reflection": "Reflection = bouncing back of light when it hits a surface.",
-    "what is refraction": "Refraction = bending of light as it passes from one medium to another.",
-    "unit of force": "SI unit of force = Newton (N).",
-    "unit of energy": "SI unit of energy = Joule (J).",
-    "unit of power": "SI unit of power = Watt (W).",
-    "unit of pressure": "SI unit of pressure = Pascal (Pa).",
-    "unit of resistance": "SI unit of resistance = Ohm (Ω).",
-    "what is resistance": "Resistance opposes current flow. R = V/I. Unit: Ohm (Ω).",
-    "resistance": "Resistance = opposition to current flow. R = V/I. Unit: Ohm (Ω).",
-  },
-  chemistry: {
-    "what is atom": "An atom is the smallest unit of matter. Has protons (+), neutrons (neutral), electrons (-).",
-    "atom": "An atom is the smallest unit of matter. Has protons (+), neutrons (neutral), electrons (-).",
-    "what is molecule": "A molecule is a group of atoms bonded together. E.g. H₂O = 2 hydrogen + 1 oxygen.",
-    "molecule": "A molecule is a group of atoms bonded together.",
-    "what is element": "An element is a pure substance made of one type of atom. E.g. Gold (Au), Iron (Fe).",
-    "what is compound": "A compound forms when two or more elements chemically combine. E.g. H₂O, NaCl.",
-    "compound": "A compound forms when two or more elements chemically combine.",
-    "formula of water": "Water = H₂O",
-    "formula of salt": "Salt = NaCl (Sodium Chloride)",
-    "formula of co2": "Carbon Dioxide = CO₂",
-    "what is ph": "pH 0–14. pH < 7 = Acid, pH = 7 = Neutral, pH > 7 = Base.",
-    "ph of water": "pH of water = 7 (Neutral)",
-    "what is acid": "An acid donates H⁺ ions. Examples: HCl, H₂SO₄. pH < 7.",
-    "acid": "An acid donates H⁺ ions. Examples: HCl, H₂SO₄. pH < 7.",
-    "what is base": "A base accepts H⁺ ions. Examples: NaOH. pH > 7.",
-    "base": "A base accepts H⁺ ions. Examples: NaOH. pH > 7.",
-    "what is periodic table": "The periodic table has 118 elements organized by atomic number.",
-    "periodic table": "The periodic table has 118 elements organized by atomic number.",
-    "what is valency": "Valency = combining capacity of an element. H=1, O=2, N=3, C=4.",
-    "valency": "Valency = combining capacity of an element. H=1, O=2, N=3, C=4.",
-    "what is oxidation": "Oxidation = loss of electrons. OIL RIG: Oxidation Is Loss.",
-    "oxidation": "Oxidation = loss of electrons.",
-    "what is reduction": "Reduction = gain of electrons. OIL RIG: Reduction Is Gain.",
-    "reduction": "Reduction = gain of electrons.",
-    "what is ionic bond": "Ionic bond forms between metal + non-metal. Example: NaCl.",
-    "ionic bond": "Ionic bond: metal + non-metal. Example: NaCl (Na⁺ + Cl⁻).",
-    "what is covalent bond": "Covalent bond forms between two non-metals sharing electrons. Example: H₂O.",
-    "covalent bond": "Covalent bond = two non-metals sharing electrons. Example: H₂O, CO₂.",
-    "atomic number of carbon": "Atomic number of Carbon = 6.",
-    "atomic number of oxygen": "Atomic number of Oxygen = 8.",
-    "what is mixture": "A mixture contains substances NOT chemically combined. Example: Salt + water.",
-    "what is solution": "A solution is a homogeneous mixture — solute dissolved in solvent. Example: Saltwater.",
-  },
-  biology: {
-    "what is cell": "A cell is the basic unit of life. Plant cells have cell wall + chloroplasts; animal cells have centrioles.",
-    "cell": "A cell is the basic unit of life. Plant cells have cell wall; animal cells don't.",
-    "what is photosynthesis": "Photosynthesis: 6CO₂ + 6H₂O + sunlight → C₆H₁₂O₆ + 6O₂. Occurs in chloroplasts.",
-    "photosynthesis": "Photosynthesis: 6CO₂ + 6H₂O + sunlight → C₆H₁₂O₆ + 6O₂.",
-    "photosynthesis equation": "6CO₂ + 6H₂O + sunlight → C₆H₁₂O₆ + 6O₂",
-    "what is respiration": "Aerobic respiration: C₆H₁₂O₆ + 6O₂ → 6CO₂ + 6H₂O + energy (ATP).",
-    "respiration": "Aerobic respiration: glucose + oxygen → carbon dioxide + water + ATP energy.",
-    "what is dna": "DNA = Deoxyribonucleic Acid. Carries the genetic information of organisms.",
-    "dna": "DNA = Deoxyribonucleic Acid. Carries genetic information. Humans have 46 chromosomes.",
-    "full form of dna": "DNA = Deoxyribonucleic Acid",
-    "what is gene": "A gene is a segment of DNA that codes for a specific protein or trait.",
-    "how many chromosomes": "Humans have 46 chromosomes (23 pairs).",
-    "what is mitosis": "Mitosis = cell division producing 2 identical daughter cells. Used for growth.",
-    "what is meiosis": "Meiosis = cell division producing 4 genetically different cells. Used in reproduction.",
-    "what is enzyme": "An enzyme is a biological catalyst that speeds up reactions. E.g. Amylase, Pepsin.",
-    "enzyme": "An enzyme is a biological catalyst. E.g. Amylase (starch), Pepsin (protein).",
-    "what is tissue": "A tissue is a group of similar cells working together. E.g. Muscle tissue.",
-    "tissue": "A tissue is a group of similar cells. E.g. Muscle tissue, Nerve tissue.",
-    "what is organ": "An organ is a group of tissues with a specific function. E.g. Heart, Liver.",
-    "organ": "An organ is a group of tissues doing a specific job. E.g. Heart, Liver, Kidney.",
-    "largest organ": "The largest organ in the human body is the Skin.",
-    "largest gland": "The largest gland is the Liver.",
-    "what is ecosystem": "An ecosystem = living organisms interacting with their environment.",
-    "ecosystem": "An ecosystem includes all living + non-living things in an environment.",
-    "what is digestion": "Digestion: Mouth → Oesophagus → Stomach → Small Intestine → Large Intestine.",
-    "digestion": "Digestion: Mouth → Oesophagus → Stomach → Small Intestine → Large Intestine.",
-    "what is blood": "Blood: RBC carries O₂, WBC fights infection, Platelets clot blood.",
-    "blood": "Blood: RBC carries O₂, WBC fights infection, Platelets clot blood.",
-    "what is heart": "Heart has 4 chambers: 2 Atria + 2 Ventricles. Pumps blood around the body.",
-    "what is mitochondria": "Mitochondria = powerhouse of the cell. Produces ATP energy via respiration.",
-    "mitochondria": "Mitochondria = powerhouse of the cell. Produces ATP energy.",
-    "powerhouse of cell": "Mitochondria is the powerhouse of the cell.",
-  },
-  english: {
-    "what is noun": "A noun names a person, place, thing, or idea. Types: Common, Proper, Abstract, Collective.",
-    "noun": "A noun names a person, place, thing, or idea. Types: Common, Proper, Abstract, Collective.",
-    "what is verb": "A verb expresses an action or state. Examples: run, jump, is, think.",
-    "verb": "A verb expresses an action or state. Examples: run, jump, is, think.",
-    "what is adjective": "An adjective describes a noun. Examples: big, red, happy, beautiful.",
-    "adjective": "An adjective describes a noun. Examples: big, red, happy, beautiful.",
-    "what is adverb": "An adverb modifies a verb/adjective/adverb. Examples: quickly, very, silently.",
-    "adverb": "An adverb modifies a verb or adjective. Examples: quickly, very, silently.",
-    "what is pronoun": "A pronoun replaces a noun. Examples: I, you, he, she, it, they, we.",
-    "pronoun": "A pronoun replaces a noun. Examples: I, you, he, she, it, they, we.",
-    "what is preposition": "A preposition shows relationship. Examples: in, on, at, under, between.",
-    "preposition": "A preposition shows relationship. Examples: in, on, at, under, between.",
-    "what is conjunction": "A conjunction joins words or clauses. FANBOYS: For, And, Nor, But, Or, Yet, So.",
-    "conjunction": "A conjunction joins words or clauses. FANBOYS: For, And, Nor, But, Or, Yet, So.",
-    "what is interjection": "An interjection expresses emotion. Examples: Wow!, Ouch!, Hurray!",
-    "what is article": "Articles: 'a' (consonant sound), 'an' (vowel sound), 'the' (specific noun).",
-    "articles": "Articles: A, An, The. 'a' before consonant, 'an' before vowel sounds.",
-    "what is tense": "Tense shows time of action. 3 main tenses: Present, Past, Future.",
-    "tense": "Tense shows time of action. Present / Past / Future.",
-    "what is active voice": "Active voice: subject performs action. Example: Ram ate food.",
-    "active voice": "Active voice: subject does the action. Example: The dog chased the cat.",
-    "what is passive voice": "Passive voice: subject receives action. Example: Food was eaten by Ram.",
-    "passive voice": "Passive voice: subject receives the action. Example: The cat was chased by the dog.",
-    "what is synonym": "A synonym has similar meaning. Fast → Quick, Happy → Joyful.",
-    "synonym": "A synonym has similar meaning. Fast → Quick, Happy → Joyful.",
-    "what is antonym": "An antonym has opposite meaning. Fast → Slow, Happy → Sad.",
-    "antonym": "An antonym has opposite meaning. Fast → Slow, Happy → Sad.",
-    "what is sentence": "A sentence = Subject + Verb + (Object). Types: Simple, Compound, Complex.",
-    "sentence": "A sentence = Subject + Verb + (Object). Types: Simple, Compound, Complex.",
-    "parts of speech": "8 Parts of Speech: Noun, Pronoun, Verb, Adjective, Adverb, Preposition, Conjunction, Interjection.",
-    "what is simile": "A simile compares using 'like' or 'as'. Example: She runs like the wind.",
-    "what is metaphor": "A metaphor compares without 'like/as'. Example: Life is a journey.",
-  },
-  telugu: {
-    "నామవాచకం అంటే ఏమిటి": "నామవాచకం (Noun): వ్యక్తి, స్థలం, వస్తువు పేరు. ఉదా: రాముడు, హైదరాబాద్.",
-    "నామవాచకం": "నామవాచకం (Noun): వ్యక్తి, స్థలం, వస్తువు పేరు.",
-    "క్రియ అంటే ఏమిటి": "క్రియ (Verb): చర్యను చూపించే పదం. ఉదా: చదువు, ఆడు, నడు.",
-    "క్రియ": "క్రియ (Verb): చర్యను చూపించే పదం.",
-    "విశేషణం": "విశేషణం (Adjective): నామవాచకాన్ని వివరించే పదం. ఉదా: పెద్ద, చిన్న.",
-  },
-  hindi: {
-    "संज्ञा क्या है": "संज्ञा (Noun): किसी व्यक्ति, स्थान या वस्तु का नाम। उदा: राम, दिल्ली, किताब।",
-    "संज्ञा": "संज्ञा (Noun): व्यक्ति, स्थान या वस्तु का नाम।",
-    "क्रिया क्या है": "क्रिया (Verb): काम को दर्शाने वाला शब्द। उदा: खाना, पीना, पढ़ना।",
-    "क्रिया": "क्रिया (Verb): काम को दर्शाने वाला शब्द।",
-    "विशेषण": "विशेषण (Adjective): संज्ञा को बताने वाला शब्द। उदा: अच्छा, बुरा, सुंदर।",
-  },
-};
-
-/* ================================================================
-   SUBJECT MAP
-   ================================================================ */
-const SUBJECT_MAP = {
-  "maths":"math", "math":"math", "physics":"physics",
-  "chemistry":"chemistry", "biology":"biology", "english":"english",
-  "telugu":"telugu", "hindi":"hindi", "social":"english", "computer":"english",
-};
-
-/* ================================================================
-   NORMALIZE  — strips noise for reliable matching
-   ================================================================ */
-function normalizeQ(q) {
-  return q.toLowerCase().trim()
-    .replace(/['"''""]/g, "")
-    .replace(/[=?!.]+$/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/* ================================================================
-   LOOKUP  — checks qaDatabase with exact + partial match
-   ================================================================ */
-function lookupLocal(question) {
-  if (!selectedSubject) return null;
-  const subjectKey = SUBJECT_MAP[selectedSubject.toLowerCase()] || selectedSubject.toLowerCase();
-  const db = qaDatabase[subjectKey];
-  if (!db) return null;
-
-  const q = normalizeQ(question);
-  const qNoSpace = q.replace(/\s+/g, "");
-
-  // 1. Exact match
-  if (db[q]) return db[q];
-
-  // 2. Exact match without spaces (catches "2+2" vs "2 + 2")
-  for (const key of Object.keys(db)) {
-    if (key.replace(/\s+/g, "") === qNoSpace) return db[key];
-  }
-
-  // 3. Partial match — question contains key OR key contains question
-  for (const key of Object.keys(db)) {
-    if (q.includes(key) || key.includes(q)) return db[key];
-  }
-
-  // 4. Word overlap — any key word appears in question
-  for (const key of Object.keys(db)) {
-    const keyWords = key.split(" ").filter(w => w.length > 3);
-    if (keyWords.length > 0 && keyWords.every(w => q.includes(w))) return db[key];
-  }
-
-  return null;
-}
-
-/* ================================================================
-   MATH EVALUATOR
-   ================================================================ */
-function tryMathEval(expr) {
-  try {
-    const cleaned = normalizeQ(expr);
-    const safe = cleaned.replace(/[^0-9+\-*/.()%^ ]/g, "");
-    if (!safe.trim()) return null;
-    const result = Function('"use strict"; return (' + safe.replace(/\^/g,"**") + ')')();
-    if (typeof result === "number" && isFinite(result)) {
-      const r = Math.round(result * 1e10) / 1e10;
-      return `📘 Expression: ${cleaned}<br>BODMAS Result → ${r}<br>✅ Answer: ${r}`;
-    }
-  } catch(e) {}
-  return null;
-}
-
-function isMathExpr(q) {
-  return /^[\d\s+\-*/().^%=?]+$/.test(q.replace(/['"]/g,"").trim());
-}
-
-/* ================================================================
    FORMAT + DISPLAY
    ================================================================ */
 function formatAnswer(text) {
@@ -404,98 +111,97 @@ function displayAnswer(chatArea, question, answer, loading) {
   chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-const offlineTips = {
-  math:      "💡 Try: 'What is Pythagoras theorem?' or type a sum like '15 × 4'",
-  physics:   "💡 Try: 'What is force?' or 'What is Newton's first law?'",
-  chemistry: "💡 Try: 'What is an atom?' or 'What is a covalent bond?'",
-  biology:   "💡 Try: 'What is photosynthesis?' or 'What is mitochondria?'",
-  english:   "💡 Try: 'What is a noun?' or 'What is active voice?'",
-  telugu:    "💡 అడగండి: 'నామవాచకం అంటే ఏమిటి?'",
-  hindi:     "💡 पूछें: 'संज्ञा क्या है?'",
-};
-
-/* ================================================================
-   ASK AI  —  Priority: local DB → math eval → backend → API → tip
-   ================================================================ */
 async function askAI() {
   const questionInput = document.getElementById("question");
-  const fileInput     = document.getElementById("imageInput");
-  const question      = questionInput.value.trim();
+  const fileInput = document.getElementById("imageInput");
+  const question = questionInput.value.trim();
 
+  // Empty question check
   if (!question) return;
-  if (!selectedSubject) { alert("Please select a subject first!"); return; }
-  if (fileInput.files.length > 0) { await uploadImage(); return; }
+
+  // Default subject if not selected
+  if (!selectedSubject) {
+    selectedSubject = "General";
+  }
+
+  // Ensure chat session exists
+  if (!currentChatId) {
+    currentChatId = "chat_" + Date.now();
+  }
+
+  // If file uploaded, handle separately
+  if (fileInput.files.length > 0) {
+    await uploadImage();
+    return;
+  }
 
   const chatArea = document.getElementById("chatArea");
+
+  // Show user message
   chatArea.innerHTML += `<div class="user-msg"><div class="msg-text">${question}</div></div>`;
 
+  // Show loading
   const loading = document.createElement("div");
   loading.className = "ai-msg";
   loading.innerHTML = "🤖 Thinking...";
   chatArea.appendChild(loading);
   chatArea.scrollTop = chatArea.scrollHeight;
+
   questionInput.value = "";
 
-  /* ── 1. Math expression → evaluate instantly ── */
-  if (isMathExpr(question)) {
-    const r = tryMathEval(question);
-    if (r) { displayAnswer(chatArea, question, r, loading); return; }
-  }
-
-  /* ── 2. Local database lookup → instant answer ── */
-  const local = lookupLocal(question);
-  if (local) { displayAnswer(chatArea, question, formatAnswer(local), loading); return; }
-
-  /* ── 3. file:// — no network allowed by browser ── */
-  if (window.location.protocol === "file:") {
-    const sk = SUBJECT_MAP[selectedSubject.toLowerCase()] || selectedSubject.toLowerCase();
-    displayAnswer(chatArea, question, offlineTips[sk] || "💡 Please ask a specific question about " + selectedSubject, loading);
-    return;
-  }
-
-  /* ── 4. Backend server ── */
   try {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 5000);
+    const t = setTimeout(() => ctrl.abort(), 10000);
+
     const res = await fetch(`${API_BASE}/ask`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, subject: selectedSubject, session_id: currentChatId, user_id: localStorage.getItem("user_id") || null }),
-      signal: ctrl.signal,
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        question: question,
+        subject: selectedSubject,
+        session_id: currentChatId,
+        user_id: localStorage.getItem("user_id") || null
+      }),
+      signal: ctrl.signal
     });
+
     clearTimeout(t);
+
+    if (!res.ok) {
+      throw new Error("Server error: " + res.status);
+    }
+
     const data = await res.json();
     const ans = data.answer || "";
-    /* If backend returns empty / error string, fall through to API */
-    if (ans && !ans.includes("❌") && !ans.includes("No answer") && ans.trim().length > 5) {
-      displayAnswer(chatArea, question, formatAnswer(ans), loading);
-      return;
-    }
-    throw new Error("backend_empty");
-  } catch (e) {
-    /* ── 5. Anthropic API ── */
-    try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514", max_tokens: 1000,
-          system: `You are a school-level tutor for ${selectedSubject}. Answer clearly and simply.`,
-          messages: [{ role: "user", content: question }],
-        }),
-      });
-      if (!res.ok) throw new Error("api_" + res.status);
-      const data = await res.json();
-      const aiText = data.content.map(i => i.type==="text" ? i.text : "").join("\n");
-      displayAnswer(chatArea, question, formatAnswer(aiText), loading);
-    } catch (apiErr) {
-      /* ── 6. All failed → tip ── */
-      const sk = SUBJECT_MAP[selectedSubject.toLowerCase()] || selectedSubject.toLowerCase();
-      displayAnswer(chatArea, question, offlineTips[sk] || "💡 Please ask a specific question about " + selectedSubject, loading);
-    }
-  }
-}
 
+    if (loading) loading.remove();
+
+    if (ans && ans.trim().length > 0) {
+      displayAnswer(chatArea, question, formatAnswer(ans), null);
+    } else {
+      chatArea.innerHTML += `
+        <div class="ai-msg" style="color:#e74c3c;">
+          ⚠️ No answer received from server.
+        </div>
+      `;
+    }
+
+  } catch (err) {
+    if (loading) loading.remove();
+
+    chatArea.innerHTML += `
+      <div class="ai-msg" style="color:#e74c3c;">
+        ⚠️ Could not connect to AI server. Please try again.
+      </div>
+    `;
+
+    console.error("Ask AI Error:", err);
+  }
+
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
 /* ================= VOICE INPUT ================= */
 let recognition = null;
 let isListening = false;
@@ -754,6 +460,7 @@ async function checkGrammar() {
   if (!text) { resultEl.innerText = "⚠️ Please enter a sentence"; return; }
   resultEl.innerHTML = `⏳ Checking grammar...`;
 
+  /* ── 1. Backend server ── */
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 8000);
@@ -769,13 +476,36 @@ async function checkGrammar() {
     const corrected = data.corrected_text || data.corrected || data.result || data.output || "";
     if (corrected && corrected.trim()) {
       resultEl.innerHTML = `✅ Corrected: <b>${corrected.trim()}</b>`;
-    } else {
-      resultEl.innerHTML = `⚠️ No correction returned from server.`;
+      return;
     }
+    throw new Error("empty_response");
   } catch (err) {
-    resultEl.innerHTML = ``;
+    /* ── 2. Anthropic API fallback ── */
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 500,
+          system: "You are a grammar correction assistant. The user provides a sentence. Return ONLY the corrected sentence with no explanation, no preamble, no quotes.",
+          messages: [{ role: "user", content: text }],
+        }),
+      });
+      if (!res.ok) throw new Error("api_" + res.status);
+      const data = await res.json();
+      const corrected = data.content.map(i => i.type === "text" ? i.text : "").join("").trim();
+      if (corrected) {
+        resultEl.innerHTML = `✅ Corrected: <b>${corrected}</b>`;
+      } else {
+        resultEl.innerHTML = `⚠️ Could not check grammar. Please try again.`;
+      }
+    } catch (apiErr) {
+      resultEl.innerHTML = `⚠️ Grammar check unavailable. Please check your connection.`;
+    }
   }
 }
+
 function openVideo(vid){window.open(`https://www.youtube.com/watch?v=${vid}`,"_blank");}
 
 /* ================= FLASHCARDS ================= */
@@ -847,3 +577,4 @@ function openGrammarTopic(topic){
   };
   display.innerHTML = topics[topic] || "";
 }
+
