@@ -31,8 +31,8 @@ app = FastAPI(lifespan=lifespan)
 # =========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # later replace with your Vercel frontend URL
-    allow_credentials=False,
+    allow_origins=["https://ai-homework.vercel.app/"],  # later replace with your Vercel frontend URL
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
