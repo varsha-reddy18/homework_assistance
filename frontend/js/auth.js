@@ -1,5 +1,4 @@
-const BACKEND = "http://127.0.0.1:8000";
-
+const BACKEND = "https://varshareddy18-ai-homework-assistance.hf.space";
 async function signup() {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();

@@ -17,6 +17,10 @@ function showSection(id){
 
 let isLoading = false;
 
+
+// ADD THIS
+const API_BASE = "https://varshareddy18-ai-homework-assistance.hf.space";
+
 function updateStreak(){
   const today = new Date().toDateString();
   let lastLogin = localStorage.getItem("lastLoginDate");
@@ -453,7 +457,7 @@ async function askAI() {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 5000);
-    const res = await fetch("http://127.0.0.1:8000/ask", {
+    const res = await fetch(`${API_BASE}/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question, subject: selectedSubject, session_id: currentChatId, user_id: localStorage.getItem("user_id") || null }),
@@ -601,7 +605,7 @@ async function uploadImage() {
 
   try {
     const fd=new FormData(); fd.append("file",file); fd.append("question",question);
-    const res=await fetch("http://127.0.0.1:8000/ask-from-image",{method:"POST",body:fd});
+    const res=await fetch(`${API_BASE}/ask-from-image`,{method:"POST",body:fd});
     if (!res.ok) throw new Error("Server error: "+res.status);
     const data=await res.json(); ld.remove();
     if (data.extracted_text?.trim()) {
@@ -753,7 +757,7 @@ async function checkGrammar() {
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 8000);
-    const res = await fetch("http://127.0.0.1:8000/grammar-check", {
+    const res = await fetch(`${API_BASE}/grammar-check`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),

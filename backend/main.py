@@ -1,9 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-import os
 
 # =========================
 # IMPORT YOUR ROUTERS
@@ -34,17 +31,11 @@ app = FastAPI(lifespan=lifespan)
 # =========================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # later replace with your Vercel frontend URL
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# =========================
-# PATHS
-# =========================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.abspath(os.path.join(BASE_DIR, "../frontend"))
 
 # =========================
 # INCLUDE API ROUTES
@@ -55,43 +46,11 @@ app.include_router(image_router)
 app.include_router(grammar_router)
 
 # =========================
-# PAGE ROUTES
+# ROOT
 # =========================
 @app.get("/")
-def home():
-    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
-
-@app.get("/login-page")
-def login_page():
-    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
-
-@app.get("/signup-page")
-def signup_page():
-    return FileResponse(os.path.join(FRONTEND_DIR, "signup.html"))
-
-@app.get("/dashboard")
-def dashboard_page():
-    return FileResponse(os.path.join(FRONTEND_DIR, "dashboard.html"))
-
-@app.get("/login.html")
-def login_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
-
-@app.get("/signup.html")
-def signup_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "signup.html"))
-
-@app.get("/dashboard.html")
-def dashboard_html():
-    return FileResponse(os.path.join(FRONTEND_DIR, "dashboard.html"))
-
-# Suppress favicon error
-@app.get("/favicon.ico", include_in_schema=False)
-def favicon():
-    ico = os.path.join(FRONTEND_DIR, "favicon.ico")
-    if os.path.exists(ico):
-        return FileResponse(ico)
-    return JSONResponse({}, status_code=204)
+def root():
+    return {"message": "AI Homework Backend is running 🚀"}
 
 # =========================
 # HEALTH CHECK
@@ -99,4 +58,3 @@ def favicon():
 @app.get("/health")
 def health():
     return {"status": "ok"}
-
