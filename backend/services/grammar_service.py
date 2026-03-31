@@ -4,19 +4,16 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 logger = logging.getLogger(__name__)
 
-# ── Device ──────────────────────────────────────────────────────────────────
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# ── Model globals ────────────────────────────────────────────────────────────
 grammar_tokenizer = None
 grammar_model     = None
 MODEL_NAME        = "vennify/t5-base-grammar-correction"
-MAX_INPUT_CHARS   = 512          # clip very long inputs before tokenisation
-MAX_NEW_TOKENS    = 128          # enough for any typical sentence
+MAX_INPUT_CHARS   = 512          
+MAX_NEW_TOKENS    = 128          
 NUM_BEAMS         = 4
 
 
-# ── Loader (lazy, called once) ───────────────────────────────────────────────
 def load_grammar_model() -> None:
     """Load tokeniser and model into memory the first time they are needed."""
     global grammar_tokenizer, grammar_model
@@ -41,8 +38,6 @@ def load_grammar_model() -> None:
         logger.error("Failed to load grammar model: %s", exc)
         raise RuntimeError(f"Grammar model could not be loaded: {exc}") from exc
 
-
-# ── Public API ───────────────────────────────────────────────────────────────
 def grammar_check(text: str) -> str:
     """
     Return a grammar-corrected version of *text*.
@@ -53,7 +48,7 @@ def grammar_check(text: str) -> str:
       • inference raises an unexpected error
       • the model returns an empty string
     """
-    # ── Validate input ───────────────────────────────────────────────────────
+   
     if not text or not text.strip():
         return text or ""
 
@@ -66,14 +61,11 @@ def grammar_check(text: str) -> str:
         )
         original = original[:MAX_INPUT_CHARS]
 
-    # ── Load model (no-op after first call) ──────────────────────────────────
     try:
         load_grammar_model()
     except RuntimeError as exc:
         logger.error("Skipping grammar check — model unavailable: %s", exc)
         return original
-
-    # ── Inference ────────────────────────────────────────────────────────────
     try:
         prompt = "grammar: " + original
 
@@ -98,12 +90,10 @@ def grammar_check(text: str) -> str:
             outputs[0], skip_special_tokens=True
         ).strip()
 
-        # ── Sanity-check the result ──────────────────────────────────────────
         if not result:
             logger.warning("Model returned empty string; returning original.")
             return original
 
-        # Reject results that are suspiciously short (< 20 % of input length)
         if len(result) < max(3, len(original) * 0.2):
             logger.warning(
                 "Result '%s' looks truncated; returning original.", result
@@ -123,7 +113,6 @@ def grammar_check(text: str) -> str:
         return original
 
 
-# ── Optional: free model from memory when no longer needed ───────────────────
 def unload_grammar_model() -> None:
     """Release model weights and free GPU/CPU memory."""
     global grammar_tokenizer, grammar_model

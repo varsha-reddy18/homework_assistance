@@ -1,27 +1,17 @@
 """
 doc_answering.py
 
-Dynamic document QA — works for ANY uploaded PDF or image.
-No hardcoded section names. Sections are detected automatically from the document.
+Document QA — works for ANY uploaded PDF or image.
+The AI model reads the extracted text and directly answers the student's question.
+No hardcoded section names. Sections detected automatically as context hints only.
 """
 
 import re
 from services.ai_service import generate_text
-
-
-# -----------------------------------------------------------------------
-# STEP 1: AUTO-DETECT SECTIONS FROM ANY DOCUMENT
-# -----------------------------------------------------------------------
 def detect_sections(document_text: str) -> dict:
     """
-    Automatically find all section headers in the document.
+    Find section headers to help structure the answer.
     Returns: { "section_name_lowercase": "full header line" }
-
-    Detects patterns like:
-      - "1. Introduction"
-      - "CHAPTER 1: OVERVIEW"
-      - "Abstract", "Conclusion", "Summary" (standalone headers)
-      - "[Page X]" markers
     """
     lines = document_text.splitlines()
     sections = {}
@@ -30,65 +20,28 @@ def detect_sections(document_text: str) -> dict:
         stripped = line.strip()
         if not stripped or len(stripped) < 3:
             continue
-
-        # Pattern 1: Numbered sections — "1. Abstract", "2.Introduction", "3) Methods"
         if re.match(r"^\d+[\.\)]\s*\w", stripped):
             key = re.sub(r"^\d+[\.\)]\s*", "", stripped).strip().lower()
             sections[key] = stripped
 
-        # Pattern 2: ALL CAPS headers — "ABSTRACT", "CONCLUSION", "RESULTS"
-        elif stripped.isupper() and 3 < len(stripped) < 80 and " " in stripped or \
-             (stripped.isupper() and 3 < len(stripped) < 30):
+        elif stripped.isupper() and 3 < len(stripped) < 80:
             key = stripped.lower()
             sections[key] = stripped
 
-        # Pattern 3: Title-Case standalone headers (short lines, no punctuation at end)
         elif re.match(r"^[A-Z][a-zA-Z\s&\-/]+$", stripped) and 4 < len(stripped) < 60:
-            # Likely a heading if next lines are longer paragraph text
-            next_line = lines[i+1].strip() if i+1 < len(lines) else ""
+            next_line = lines[i + 1].strip() if i + 1 < len(lines) else ""
             if len(next_line) > 40 or next_line == "":
                 key = stripped.lower()
                 sections[key] = stripped
 
-        # Pattern 4: "Chapter X" or "Section X"
         elif re.match(r"^(chapter|section|part|unit)\s+\d+", stripped, re.IGNORECASE):
             key = stripped.lower()
             sections[key] = stripped
 
     return sections
-
-
-# -----------------------------------------------------------------------
-# STEP 2: FIND BEST MATCHING SECTION FOR THE QUESTION
-# -----------------------------------------------------------------------
-def find_matching_section(question: str, sections: dict) -> str | None:
+def extract_section_text(document_text: str, section_header: str, max_chars: int = 2000) -> str:
     """
-    Find which detected section best matches the student's question.
-    Uses keyword overlap scoring.
-    """
-    q_words = set(re.findall(r"[a-z]{3,}", question.lower()))
-
-    best_section = None
-    best_score = 0
-
-    for section_key in sections:
-        section_words = set(re.findall(r"[a-z]{3,}", section_key))
-        score = len(q_words & section_words)
-        if score > best_score:
-            best_score = score
-            best_section = section_key
-
-    # Only return if there's a real match
-    return best_section if best_score > 0 else None
-
-
-# -----------------------------------------------------------------------
-# STEP 3: EXTRACT SECTION TEXT
-# -----------------------------------------------------------------------
-def extract_section_text(document_text: str, section_header: str) -> str:
-    """
-    Given a section header line, extract all text until the next section.
-    Works for any document structure.
+    Extract text for a given section header until the next section.
     """
     lines = document_text.splitlines()
     result = []
@@ -100,13 +53,11 @@ def extract_section_text(document_text: str, section_header: str) -> str:
         stripped_lower = stripped.lower()
 
         if not inside:
-            # Find the header line
             if header_lower in stripped_lower or stripped_lower in header_lower:
                 inside = True
                 result.append(stripped)
                 continue
         else:
-            # Stop conditions — next section header
             is_numbered = re.match(r"^\d+[\.\)]\s*[A-Z]", stripped)
             is_caps_header = stripped.isupper() and 3 < len(stripped) < 80
             is_page_marker = re.match(r"^\[Page \d+\]", stripped)
@@ -118,37 +69,144 @@ def extract_section_text(document_text: str, section_header: str) -> str:
             result.append(stripped)
 
     extracted = "\n".join(result).strip()
+    if len(extracted) > max_chars:
+        extracted = extracted[:max_chars] + "\n[... section continues ...]"
     return extracted if len(extracted) > 20 else ""
+def get_relevant_chunks(document_text: str, question: str, max_chars: int = 6000) -> str:
+    """
+    Score all paragraphs/chunks by keyword overlap with the question.
+    Returns the top relevant chunks concatenated, up to max_chars.
+    Ensures the AI has enough context to answer accurately.
+    """
+    q_words = set(re.findall(r"[a-z]{3,}", question.lower()))
 
+    # Split on page markers or double newlines
+    chunks = re.split(r"\[Page \d+\]|\n{2,}", document_text)
+    chunks = [c.strip() for c in chunks if len(c.strip()) > 30]
 
-# -----------------------------------------------------------------------
-# DETECT INTENT
-# -----------------------------------------------------------------------
+    scored = []
+    for chunk in chunks:
+        chunk_words = set(re.findall(r"[a-z]{3,}", chunk.lower()))
+        score = len(q_words & chunk_words)
+        scored.append((score, chunk))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+
+    selected = []
+    total_chars = 0
+
+    if chunks:
+        first = chunks[0]
+        selected.append(first)
+        total_chars += len(first)
+
+    for score, chunk in scored:
+        if total_chars >= max_chars:
+            break
+        if chunk not in selected:
+            selected.append(chunk)
+            total_chars += len(chunk)
+
+    return "\n\n".join(selected)
+
 def detect_intent(question: str) -> str:
     q = question.lower().strip()
 
-    if re.search(r"\b(summarize|summary|overview|brief|gist)\b", q):
+    if re.search(r"\b(summarize|summary|overview|brief|gist|what is this about|what does this document)\b", q):
         return "summarize"
 
-    if re.search(r"\b(mcq|multiple choice|answer the questions?|correct answer|option)\b", q):
+    if re.search(r"\b(mcq|multiple choice|answer the questions?|correct answer|solve the questions)\b", q):
         return "mcq"
 
-    if re.search(r"\b(list|enumerate|what are the topics|what are the sections|points|headings)\b", q):
+    if re.search(r"\b(list|enumerate|what are the topics|what are the sections|headings|chapters)\b", q):
         return "list"
 
-    if re.search(r"\b(title|author|submitted|institution|course|department|year|college|university|who wrote)\b", q):
+    if re.search(r"\b(title|author|submitted|institution|course|department|college|university|who wrote|student name)\b", q):
         return "metadata"
 
-    if re.search(r"\b(explain|describe|what is|tell me|give me|show me|write about|elaborate|detail)\b", q):
-        return "explain"
+    return "answer"  # Default: answer the question directly from the document
 
-    return "explain"
+def ask_ai_from_document(question: str, context: str, intent: str = "answer") -> str:
+    """
+    The main AI call. Passes document context + question to the AI model.
+    This is what was MISSING in the original code for most intents.
+    """
 
+    if intent == "summarize":
+        prompt = f"""You are a helpful study assistant. A student has uploaded a document.
 
-# -----------------------------------------------------------------------
-# ANSWER MCQs
-# -----------------------------------------------------------------------
-def answer_mcqs(document_text: str) -> str:
+DOCUMENT CONTENT:
+{context}
+
+Task: Write a clear, well-structured summary of this document. Include:
+- What the document is about
+- Key topics or sections covered
+- Main points and important details
+
+Summary:"""
+
+    elif intent == "mcq":
+        prompt = f"""You are a helpful study assistant. A student has uploaded a document with questions.
+
+DOCUMENT CONTENT:
+{context}
+
+Task: Find all questions in the document and answer each one clearly and correctly.
+For multiple choice questions, identify the correct option and briefly explain why.
+For short answer questions, give a complete answer.
+
+Answers:"""
+
+    elif intent == "metadata":
+        prompt = f"""You are a helpful study assistant. A student has uploaded a document.
+
+DOCUMENT CONTENT:
+{context}
+
+Task: Extract and list the document's metadata such as:
+title, author/student name, institution, course, subject, date, department, etc.
+If any field is not found, skip it.
+
+Document Information:"""
+
+    elif intent == "list":
+        prompt = f"""You are a helpful study assistant. A student has uploaded a document.
+
+DOCUMENT CONTENT:
+{context}
+
+Task: List all the main topics, sections, chapters, or headings found in this document.
+Present them as a numbered list.
+
+Topics:"""
+
+    else:  # "answer" — the most important case
+        prompt = f"""You are a helpful school tutor. A student has uploaded a document and asked a question about it.
+
+DOCUMENT CONTENT:
+{context}
+
+STUDENT'S QUESTION: {question}
+
+Instructions:
+- Answer the question directly and completely using information from the document above.
+- If the document contains the answer, explain it clearly in simple language suitable for a student.
+- If the document has relevant formulas, definitions, or examples, include them.
+- If the answer is not in the document, say so clearly and provide a general educational answer.
+- Do NOT just copy-paste text. Explain it properly.
+
+Answer:"""
+
+    response = generate_text(prompt, max_new_tokens=512)
+
+    if not response or len(response.strip()) < 5:
+        return "⚠️ The AI could not generate an answer. Please try rephrasing your question."
+
+    return response.strip()
+def answer_mcqs_from_document(document_text: str) -> str:
+    """
+    Detect and answer MCQ blocks found in the document.
+    """
     lines = document_text.splitlines()
     questions = []
     current_q = []
@@ -174,101 +232,25 @@ def answer_mcqs(document_text: str) -> str:
         return ""
 
     answers = []
-    for q_block in questions:
-        q_lines = q_block.strip().splitlines()
-        if not q_lines:
+    for q_block in questions[:20]:  # cap at 20 MCQs
+        q_block = q_block.strip()
+        if not q_block:
             continue
-        q_text = q_lines[0]
-        options = [l for l in q_lines[1:] if re.match(r"^[a-dA-D][\)\.\s]", l.strip())]
 
-        if options:
-            prompt = f"""Choose the correct answer for this multiple choice question.
-Reply with only the correct letter and answer text.
+        prompt = f"""You are a school exam assistant. Answer this question correctly.
+Give the correct answer with a short explanation (1-2 sentences).
 
 {q_block}
 
-Correct answer:"""
-            ai_ans = generate_text(prompt, max_new_tokens=60)
-            if ai_ans and len(ai_ans) > 1:
-                answers.append(f"❓ {q_text}\n✅ {ai_ans}")
-            else:
-                answers.append(f"❓ {q_text}\n⚠️ Could not determine answer automatically.")
+Answer:"""
+        ai_ans = generate_text(prompt, max_new_tokens=100)
+        if ai_ans and len(ai_ans.strip()) > 2:
+            answers.append(f"❓ {q_block}\n✅ {ai_ans.strip()}")
         else:
-            answers.append(f"❓ {q_text}")
+            answers.append(f"❓ {q_block}\n⚠️ Could not determine answer.")
 
-    return "\n\n".join(answers)
+    return "\n\n---\n\n".join(answers)
 
-
-# -----------------------------------------------------------------------
-# SUMMARIZE ANY DOCUMENT
-# -----------------------------------------------------------------------
-def summarize_document(document_text: str, sections: dict) -> str:
-    lines = [l.strip() for l in document_text.splitlines() if l.strip()]
-
-    # Find title — first meaningful non-page line
-    title = ""
-    for line in lines[:15]:
-        if len(line) > 8 and not line.startswith("[Page") and not re.match(r"^\d+[\.\)]", line):
-            title = line
-            break
-
-    result = []
-
-    if title:
-        result.append(f"📄 Document: {title}")
-
-    if sections:
-        result.append(f"\n📚 Sections ({len(sections)} found):\n" +
-                      "\n".join(f"  • {v}" for v in list(sections.values())[:15]))
-
-    # Try to get abstract / introduction
-    for key in ["abstract", "introduction", "overview", "summary","conclude"]:
-        for section_key, header in sections.items():
-            if key in section_key:
-                text = extract_section_text(document_text, header)
-                if text:
-                    result.append(f"\n📝 {header}:\n{text[:600]}")
-                    break
-
-    if not result:
-        result.append(document_text[:800])
-
-    return "\n".join(result)
-
-
-# -----------------------------------------------------------------------
-# EXTRACT METADATA
-# -----------------------------------------------------------------------
-def extract_metadata(document_text: str) -> str:
-    lines = [l.strip() for l in document_text.splitlines() if l.strip()]
-
-    meta_patterns = [
-        "title", "course", "institution", "submitted by", "submitted to",
-        "department", "academic year", "author", "college", "university",
-        "school", "subject", "date", "roll", "student", "teacher", "professor"
-    ]
-
-    result = []
-    for i, line in enumerate(lines[:50]):
-        line_lower = line.lower()
-        for pat in meta_patterns:
-            if pat in line_lower:
-                value = line
-                if i + 1 < len(lines) and len(lines[i+1]) < 60:
-                    if not any(p in lines[i+1].lower() for p in meta_patterns):
-                        value += ": " + lines[i+1]
-                result.append(f"• {value}")
-                break
-
-    if result:
-        return "📋 Document Information:\n\n" + "\n".join(result)
-    # Fallback: return first page
-    return "📋 Document Content:\n\n" + document_text[:400]
-
-
-# -----------------------------------------------------------------------
-# LIST TOPICS
-# -----------------------------------------------------------------------
 def list_topics(sections: dict, document_text: str) -> str:
     if sections:
         topic_lines = "\n".join(f"  {i+1}. {v}" for i, v in enumerate(sections.values()))
@@ -285,88 +267,43 @@ def list_topics(sections: dict, document_text: str) -> str:
     if topics:
         return "📚 Topics found:\n\n" + "\n".join(topics[:20])
 
-    return "No structured topics found in this document."
-
-
-# -----------------------------------------------------------------------
-# EXPLAIN — keyword-scored paragraph retrieval
-# -----------------------------------------------------------------------
-def explain_from_document(document_text: str, question: str,
-                           sections: dict, matched_section: str | None) -> str:
-
-    # ✅ If a section matched — extract and return it fully
-    if matched_section and matched_section in sections:
-        header = sections[matched_section]
-        text = extract_section_text(document_text, header)
-        if text:
-            return f"📘 {header}:\n\n{text}\n\n---\n✅ Above is the '{header}' section from your document."
-
-    # ✅ Try direct keyword search in section headers
-    q_lower = question.lower()
-    for section_key, header in sections.items():
-        if any(word in section_key for word in re.findall(r"[a-z]{4,}", q_lower)):
-            text = extract_section_text(document_text, header)
-            if text:
-                return f"📘 {header}:\n\n{text}"
-
-    # ✅ Score all paragraphs by keyword overlap with question
-    q_words = set(re.findall(r"[a-z]{4,}", question.lower()))
-    paragraphs = re.split(r"\n{2,}|\[Page \d+\]", document_text)
-
-    scored = []
-    for para in paragraphs:
-        para = para.strip()
-        if len(para) < 60:
-            continue
-        para_words = set(re.findall(r"[a-z]{4,}", para.lower()))
-        score = len(q_words & para_words)
-        scored.append((score, para))
-
-    scored.sort(key=lambda x: x[0], reverse=True)
-    top_paras = [p for score, p in scored[:4] if score > 0]
-
-    if top_paras:
-        return "📘 Most relevant content from your document:\n\n" + "\n\n".join(top_paras)
-
-    # ✅ Last resort — return beginning of document
-    return "📘 Document Content:\n\n" + document_text[:1000]
-
-
-# -----------------------------------------------------------------------
-# MAIN ENTRY POINT
-# -----------------------------------------------------------------------
+    return "No structured topics detected. Please ask a specific question about the document."
 def answer_from_document(question: str, document_text: str) -> str:
     """
     Works for ANY uploaded PDF or image document.
-    Dynamically detects sections, matches the question, returns full answer.
+    The AI model reads the document and answers the student's question directly.
     """
-    # Step 1: Auto-detect all sections in this document
+
+    if not document_text or len(document_text.strip()) < 20:
+        return "⚠️ Could not extract readable text from the uploaded file. Please ensure the image/PDF is clear and try again."
+
+    # Step 1: Detect sections (used as hints/context, not gatekeepers)
     sections = detect_sections(document_text)
 
     # Step 2: Detect what the student wants
     intent = detect_intent(question)
 
-    # Step 3: Find the best matching section for the question
-    matched_section = find_matching_section(question, sections)
+    print(f"[DOC QA] intent={intent} | sections_found={len(sections)} | doc_length={len(document_text)}")
 
-    print(f"[DOC QA] intent={intent} | matched={matched_section} | sections={list(sections.keys())[:6]}")
-
-    # Step 4: Route to the right handler
-    if intent == "mcq":
-        mcq_ans = answer_mcqs(document_text)
-        if mcq_ans:
-            return "📝 MCQ Answers:\n\n" + mcq_ans
-        # fallback to explain if no MCQs found
-        return explain_from_document(document_text, question, sections, matched_section)
-
-    if intent == "summarize":
-        return summarize_document(document_text, sections)
-
-    if intent == "metadata":
-        return extract_metadata(document_text)
-
+    # Step 3: Handle list intent locally (no AI needed)
     if intent == "list":
         return list_topics(sections, document_text)
 
-    # explain / default
-    return explain_from_document(document_text, question, sections, matched_section)
+    # Step 4: Handle dedicated MCQ intent
+    if intent == "mcq":
+        mcq_ans = answer_mcqs_from_document(document_text)
+        if mcq_ans:
+            return "📝 Answers to Questions in Your Document:\n\n" + mcq_ans
+        # Fall through to general AI answer if no structured MCQs found
+
+    # Step 5: Get the most relevant chunks from the document for context
+    # For summarize/metadata, use the full document start; for answers, use scored chunks
+    if intent in ("summarize", "metadata"):
+        context = document_text[:8000]  # Use up to 8000 chars for full context
+    else:
+        context = get_relevant_chunks(document_text, question, max_chars=6000)
+
+    # Step 6: Ask the AI to answer using the document content
+    answer = ask_ai_from_document(question, context, intent)
+
+    return answer

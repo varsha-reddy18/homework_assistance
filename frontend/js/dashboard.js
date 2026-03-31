@@ -17,7 +17,7 @@ function showSection(id){
 
 let isLoading = false;
 
-const API_BASE = "https://varshareddy18-ai-homework-assistance.hf.space";
+const API_BASE = "http://127.0.0.1:8000";
 
 function updateStreak(){
   const today = new Date().toDateString();
