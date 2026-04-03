@@ -393,7 +393,7 @@
     chatArea.scrollTop = chatArea.scrollHeight;
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/ask", {
+      const res = await fetch(`${API_BASE}/ask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question, subject: selectedSubject, session_id: currentChatId, user_id: localStorage.getItem("user_id") || null })
@@ -454,7 +454,7 @@
       formData.append("file", file);
       formData.append("question", question);
 
-      const res = await fetch("http://127.0.0.1:8000/ask-from-image", { method: "POST", body: formData });
+      const res = await fetch(`${API_BASE}/ask-from-image`, { method: "POST", body: formData });
       if (!res.ok) { const e = await res.json(); throw new Error(e.detail || `Error ${res.status}`); }
 
       const data = await res.json();
