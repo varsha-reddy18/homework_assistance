@@ -1,9 +1,3 @@
-
-dashboard.js
-frontend/js
-
-
-
 function loadUser() {
   const user = localStorage.getItem("user_id") || "Student";
   const userNameEl = document.getElementById("userName");
