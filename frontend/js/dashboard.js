@@ -1,3 +1,9 @@
+
+dashboard.js
+frontend/js
+
+
+
 function loadUser() {
   const user = localStorage.getItem("user_id") || "Student";
   const userNameEl = document.getElementById("userName");
@@ -8,17 +14,13 @@ function logout() {
   window.location.href = "login.html";
 }
 window.addEventListener("load", loadUser);
-
 /* ================= SECTION SWITCH ================= */
 function showSection(id) {
   document.querySelectorAll(".section").forEach(sec => sec.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
-
 let isLoading = false;
-
 const API_BASE = "https://varshareddy18-ai-homework-assistance.hf.space";
-
 function updateStreak() {
   const today = new Date().toDateString();
   let lastLogin = localStorage.getItem("lastLoginDate");
@@ -33,11 +35,9 @@ function updateStreak() {
   const el = document.getElementById("streakCount");
   if (el) el.innerText = streak;
 }
-
 /* ================= SUBJECT CHAT SYSTEM ================= */
 let selectedSubject = "";
 let currentChatId = null;
-
 function openSubject(subject) {
   selectedSubject = subject;
   showSection("ask");
@@ -52,7 +52,6 @@ function openSubject(subject) {
   loadChat(currentChatId);
   renderChatList();
 }
-
 function createNewChat() {
   if (!selectedSubject) { alert("Please select a subject first!"); return; }
   const chatId = "chat_" + Date.now();
@@ -62,7 +61,6 @@ function createNewChat() {
   document.getElementById("chatArea").innerHTML = `<div class="subject-banner">📘 ${selectedSubject} Mode Activated</div>`;
   renderChatList();
 }
-
 function renderChatList() {
   const chatList = document.getElementById("chatList");
   chatList.innerHTML = "";
@@ -77,7 +75,6 @@ function renderChatList() {
     }
   });
 }
-
 function loadChat(chatId) {
   currentChatId = chatId;
   localStorage.setItem(selectedSubject + "_currentChatId", chatId);
@@ -89,7 +86,6 @@ function loadChat(chatId) {
   });
   chatArea.scrollTop = chatArea.scrollHeight;
 }
-
 /* ================================================================
    FORMAT + DISPLAY
    ================================================================ */
@@ -98,7 +94,6 @@ function formatAnswer(text) {
     .replace(/\n\n/g, "<br><br>").replace(/\n/g, "<br>")
     .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
 }
-
 function displayAnswer(chatArea, question, answer, loading) {
   if (loading) loading.remove();
   chatArea.innerHTML += `<div class="ai-msg">🤖 ${answer}</div>`;
@@ -110,49 +105,38 @@ function displayAnswer(chatArea, question, answer, loading) {
   renderChatList();
   chatArea.scrollTop = chatArea.scrollHeight;
 }
-
 async function askAI() {
   const questionInput = document.getElementById("question");
   const fileInput = document.getElementById("imageInput");
   const question = questionInput.value.trim();
-
   // Empty question check
   if (!question) return;
-
   // Default subject if not selected
   if (!selectedSubject) {
     selectedSubject = "General";
   }
-
   // Ensure chat session exists
   if (!currentChatId) {
     currentChatId = "chat_" + Date.now();
   }
-
   // If file uploaded, handle separately
   if (fileInput.files.length > 0) {
     await uploadImage();
     return;
   }
-
   const chatArea = document.getElementById("chatArea");
-
   // Show user message
   chatArea.innerHTML += `<div class="user-msg"><div class="msg-text">${question}</div></div>`;
-
   // Show loading
   const loading = document.createElement("div");
   loading.className = "ai-msg";
   loading.innerHTML = "🤖 Thinking...";
   chatArea.appendChild(loading);
   chatArea.scrollTop = chatArea.scrollHeight;
-
   questionInput.value = "";
-
   try {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 10000);
-
+    const t = setTimeout(() => ctrl.abort(), 60000);
     const res = await fetch(`${API_BASE}/ask`, {
       method: "POST",
       headers: {
@@ -166,18 +150,13 @@ async function askAI() {
       }),
       signal: ctrl.signal
     });
-
     clearTimeout(t);
-
     if (!res.ok) {
       throw new Error("Server error: " + res.status);
     }
-
     const data = await res.json();
     const ans = data.answer || "";
-
     if (loading) loading.remove();
-
     if (ans && ans.trim().length > 0) {
       displayAnswer(chatArea, question, formatAnswer(ans), null);
     } else {
@@ -187,19 +166,15 @@ async function askAI() {
         </div>
       `;
     }
-
   } catch (err) {
     if (loading) loading.remove();
-
     chatArea.innerHTML += `
       <div class="ai-msg" style="color:#e74c3c;">
         ⚠️ Could not connect to AI server. Please try again.
       </div>
     `;
-
     console.error("Ask AI Error:", err);
   }
-
   chatArea.scrollTop = chatArea.scrollHeight;
 }
 /* ================= VOICE INPUT ================= */
@@ -207,16 +182,13 @@ let recognition = null;
 let isListening = false;
 let currentSpeech = null;
 let voiceEnabled = true;
-
 const SUBJECT_LANG_MAP = {
   "Telugu": "te-IN", "Hindi": "hi-IN", "English": "en-IN", "Maths": "en-IN",
   "Physics": "en-IN", "Chemistry": "en-IN", "Biology": "en-IN", "Social": "en-IN", "Computer": "en-IN",
 };
-
 function getMicBtn() {
   return document.querySelector(".mic-btn") || document.querySelector('[onclick="startVoice()"]') || document.querySelector('[onclick*="startVoice"]');
 }
-
 function startVoice() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { alert("⚠️ Voice input not supported. Use Chrome or Edge."); return; }
@@ -241,19 +213,16 @@ function startVoice() {
   recognition.onend = () => { isListening = false; const b = getMicBtn(); if (b) { b.style.color = ""; b.title = ""; } };
   try { recognition.start(); } catch (e) { isListening = false; alert("⚠️ Could not start voice input."); }
 }
-
 function stopVoice() {
   if (recognition) { try { recognition.stop(); } catch (e) { } }
   window.speechSynthesis.cancel(); isListening = false;
   const b = getMicBtn(); if (b) { b.style.color = ""; b.title = ""; }
 }
-
 /* ================= SPEAK SYSTEM ================= */
 let availableVoices = [];
 function loadVoices() { availableVoices = window.speechSynthesis.getVoices(); }
 window.speechSynthesis.onvoiceschanged = loadVoices;
 loadVoices();
-
 function speakText(text) {
   if (!voiceEnabled || !text || !text.trim()) return;
   window.speechSynthesis.cancel();
@@ -268,13 +237,11 @@ function speakText(text) {
   currentSpeech = s;
   window.speechSynthesis.speak(s);
 }
-
 function speakInput() {
   const t = document.getElementById("question").value.trim();
   if (!t) { alert("⚠️ Please type something first."); return; }
   speakText(t);
 }
-
 /* ================= IMAGE UPLOAD ================= */
 document.getElementById("imageInput").addEventListener("change", function () {
   const file = this.files[0]; if (!file) return;
@@ -288,13 +255,11 @@ document.getElementById("imageInput").addEventListener("change", function () {
   if (!document.getElementById("question").value.trim())
     document.getElementById("question").placeholder = "Type your question about this file, then press ➤";
 });
-
 function clearFile() {
   document.getElementById("imageInput").value = "";
   const b = document.getElementById("fileBadge"); if (b) b.remove();
   document.getElementById("question").placeholder = "Ask anything...";
 }
-
 async function uploadImage() {
   const fileInput = document.getElementById("imageInput"), chat = document.getElementById("chatArea"),
     qi = document.getElementById("question"), file = fileInput.files[0], question = qi.value.trim();
@@ -304,11 +269,9 @@ async function uploadImage() {
   if (!allowed.includes(file.type)) { alert("⚠️ Only JPG, PNG, BMP, WEBP, or PDF supported."); clearFile(); return; }
   if (file.size > 10 * 1024 * 1024) { alert("⚠️ File too large. Max 10MB."); clearFile(); return; }
   if (!selectedSubject) { alert("⚠️ Please select a subject first."); return; }
-
   chat.innerHTML += `<div class="user-msg"><div class="msg-text">📎 <b>${file.name}</b><br><small>❓ ${question}</small></div></div>`;
   const ld = document.createElement("div"); ld.className = "ai-msg"; ld.innerHTML = "🤖 Reading your file...";
   chat.appendChild(ld); chat.scrollTop = chat.scrollHeight;
-
   try {
     const fd = new FormData(); fd.append("file", file); fd.append("question", question);
     const res = await fetch(`${API_BASE}/ask-from-image`, { method: "POST", body: fd });
@@ -331,7 +294,6 @@ async function uploadImage() {
   }
   qi.value = ""; qi.placeholder = "Ask anything..."; clearFile(); chat.scrollTop = chat.scrollHeight;
 }
-
 /* ================= STUDY PLANNER ================= */
 function generateStudyPlanner() {
   const name = document.getElementById("studentName").value.trim();
@@ -377,7 +339,6 @@ function generateStudyPlanner() {
 }
 function toggleComplete(el) { el.style.textDecoration = el.style.textDecoration === "line-through" ? "none" : "line-through"; }
 function savePlanner() { alert("✅ Plan saved for " + document.getElementById("studentName").value + " on " + document.getElementById("date").value); }
-
 /* ================= QUIZ ================= */
 let currentQ = 0, score = 0;
 const questions = [
@@ -442,28 +403,23 @@ function selectAnswer(ans) {
   if (++currentQ < questions.length) showQuestion();
   else { document.getElementById("quizArea").innerHTML = ""; document.getElementById("resultBox").innerHTML = `<div class="result">🎉 Score: ${score}/${questions.length}<br><br><button class="start-btn" onclick="location.reload()">Play Again</button></div>`; }
 }
-
 /* ================= PUZZLE ================= */
 const words = ["grammar", "noun", "verb", "adjective", "adverb", "sentence", "paragraph", "poetry", "prose", "synonym", "antonym", "tense", "voice", "clause", "phrase", "history", "culture", "society", "economy", "government", "democracy", "constitution", "citizen", "rights", "duties", "geography", "climate", "continent", "population", "trade", "addition", "subtraction", "multiplication", "division", "fraction", "decimal", "percentage", "ratio", "equation", "algebra", "geometry", "angle", "triangle", "circle", "perimeter", "experiment", "hypothesis", "theory", "observation", "research", "matter", "energy", "force", "motion", "element", "compound", "mixture", "reaction", "lab", "analysis", "velocity", "acceleration", "gravity", "friction", "pressure", "work", "power", "wave", "sound", "light", "reflection", "refraction", "electricity", "magnetism", "cell", "tissue", "organ", "system", "organism", "photosynthesis", "respiration", "digestion", "circulation", "enzyme", "dna", "gene", "evolution", "species", "habitat", "ecosystem", "biodiversity", "atom", "molecule", "neutron", "proton", "electron", "formula", "solution", "density"];
 let currentWord = "";
 function scramble(w) { return w.split('').sort(() => Math.random() - 0.5).join(''); }
 function newPuzzle() { currentWord = words[Math.floor(Math.random() * words.length)]; document.getElementById("scrambledWord").innerText = scramble(currentWord).toUpperCase(); document.getElementById("userAnswer").value = ""; document.getElementById("puzzleResult").innerText = ""; }
 function checkPuzzle() { const u = document.getElementById("userAnswer").value.toLowerCase(); const r = document.getElementById("puzzleResult"); if (u === currentWord) { r.innerText = "✅ Correct!"; r.style.color = "green"; } else { r.innerText = "❌ Try Again!"; r.style.color = "red"; } }
-
 window.addEventListener("load", function () { newPuzzle(); updateStreak(); renderChatList(); updateDisplay(); if (localStorage.getItem("theme") === "dark") document.body.classList.add("dark-mode"); });
-
 /* ================= GRAMMAR CHECK ================= */
 async function checkGrammar() {
   const text = document.getElementById("grammarInput").value.trim();
   const resultEl = document.getElementById("grammarResult");
-
   if (!text) { resultEl.innerText = "⚠️ Please enter a sentence"; return; }
   resultEl.innerHTML = `⏳ Checking grammar...`;
-
   /* ── 1. Backend server ── */
   try {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 8000);
+    const t = setTimeout(() => ctrl.abort(), 60000);
     const res = await fetch(`${API_BASE}/grammar-check`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -505,9 +461,7 @@ async function checkGrammar() {
     }
   }
 }
-
 function openVideo(vid) { window.open(`https://www.youtube.com/watch?v=${vid}`, "_blank"); }
-
 /* ================= FLASHCARDS ================= */
 let flashcards = [], currentIndex = 0;
 function addFlashcard() {
@@ -530,7 +484,6 @@ function updateFlashList() {
   const list = document.getElementById("flashList"); list.innerHTML = "";
   flashcards.forEach((c, i) => { const d = document.createElement("div"); d.className = "flash-mini-card"; d.innerText = c.q; d.onclick = () => { if (d.classList.contains("back")) { d.classList.remove("back"); d.innerText = c.q; } else { d.classList.add("back"); d.innerText = c.a; } }; list.appendChild(d); });
 }
-
 /* ================= POMODORO ================= */
 let time = 1500, timerInterval;
 function updateDisplay() { const m = Math.floor(time / 60), s = time % 60; document.getElementById("timer").innerText = `${m}:${s < 10 ? "0" : ""}${s}`; }
@@ -538,13 +491,11 @@ function startTimer() { if (timerInterval) return; timerInterval = setInterval((
 function pauseTimer() { clearInterval(timerInterval); timerInterval = null; }
 function resetTimer() { pauseTimer(); time = 1500; updateDisplay(); }
 function toggleDark() { document.body.classList.toggle("dark-mode"); }
-
 /* ================= DRAG QUIZ ================= */
 let draggedItem = null;
 document.querySelectorAll(".drag-item").forEach(i => i.addEventListener("dragstart", function () { draggedItem = this; }));
 document.querySelectorAll(".drop-box").forEach(b => { b.addEventListener("dragover", e => e.preventDefault()); b.addEventListener("drop", function () { if (!this.querySelector(".drag-item")) this.appendChild(draggedItem); }); });
 function checkDragQuiz() { let c = 0; document.querySelectorAll(".drop-box").forEach(b => { const i = b.querySelector(".drag-item"); if (i && i.innerText === b.dataset.match) { c++; b.style.background = "#c8f7c5"; } else b.style.background = "#f7c5c5"; }); document.getElementById("dragResult").innerText = `Score: ${c}/3`; }
-
 /* ================= GEO & SCIENCE ================= */
 function loadGeo(type) {
   const result = document.getElementById("geoResult"); result.innerHTML = "";
@@ -553,7 +504,6 @@ function loadGeo(type) {
 }
 const scienceData = { physics: [{ name: "Gravity", info: "Force attracting objects toward Earth" }, { name: "Velocity", info: "Speed with direction" }, { name: "Energy", info: "Ability to do work" }, { name: "Force", info: "Push or pull on an object" }, { name: "Electricity", info: "Flow of electric charge" }], chemistry: [{ name: "Atom", info: "Smallest unit of matter" }, { name: "Molecule", info: "Group of atoms bonded together" }, { name: "Element", info: "Pure substance of one atom type" }, { name: "Compound", info: "Combination of elements" }, { name: "Reaction", info: "Process where substances change" }], biology: [{ name: "Cell", info: "Basic unit of life" }, { name: "DNA", info: "Genetic material of organisms" }, { name: "Photosynthesis", info: "Plants make food using sunlight" }, { name: "Respiration", info: "Energy release process" }, { name: "Organism", info: "Any living being" }], space: [{ name: "Sun", info: "Star at center of solar system" }, { name: "Moon", info: "Earth's natural satellite" }, { name: "Planet", info: "Body orbiting a star" }, { name: "Galaxy", info: "System of stars and planets" }, { name: "Black Hole", info: "Region with extremely strong gravity" }], environment: [{ name: "Ecosystem", info: "Living + non-living interaction" }, { name: "Pollution", info: "Harmful substances in environment" }, { name: "Climate", info: "Weather patterns over long periods" }, { name: "Biodiversity", info: "Variety of life forms" }, { name: "Conservation", info: "Protection of natural resources" }], inventions: [{ name: "Electric Bulb", info: "Invented by Thomas Edison" }, { name: "Telephone", info: "Invented by Alexander Graham Bell" }, { name: "Internet", info: "Global computer network" }, { name: "Computer", info: "Electronic computing device" }, { name: "Airplane", info: "Invented by Wright brothers" }] };
 function loadScience(type) { const r = document.getElementById("geoResult"); r.innerHTML = ""; (scienceData[type] || []).forEach(i => { const d = document.createElement("div"); d.className = "geo-item"; d.innerHTML = `<h4>${i.name}</h4><p>${i.info}</p>`; r.appendChild(d); }); }
-
 /* ================= UI HELPERS ================= */
 function toggleSidebar() { const s = document.getElementById("sidebar"), m = document.querySelector(".main"); s.classList.toggle("hidden"); m.classList.toggle("full"); s.classList.toggle("hide"); }
 function toggleProfileMenu() { document.getElementById("profileMenu").classList.toggle("show"); }
@@ -563,7 +513,6 @@ document.addEventListener("click", function (e) {
   const menu = document.getElementById("profileMenu"), profile = document.querySelector(".profile-circle");
   if (profile && menu && !profile.contains(e.target) && !menu.contains(e.target)) menu.classList.remove("show");
 });
-
 /* ================= GRAMMAR TOPICS ================= */
 function openGrammarTopic(topic) {
   const display = document.getElementById("grammarTopicDisplay");
@@ -577,4 +526,3 @@ function openGrammarTopic(topic) {
   };
   display.innerHTML = topics[topic] || "";
 }
-
