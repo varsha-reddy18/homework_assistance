@@ -13,7 +13,7 @@ python-dotenv
 Pillow
 pytesseract
 PyMuPDF
-pydantic[email]
+email-validator
 deep-translator
 opencv-python-headless
 torch

@@ -1,3 +1,12 @@
+---
+title: AI Homework Assistance
+emoji: 🎓
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+---
+
 # 🎓 AI-Powered Homework Assistance System
 
 An intelligent **AI-based educational web application** designed to help students with homework, grammar correction, study planning, quizzes, flashcards, voice interaction, and general knowledge learning.
@@ -155,14 +164,14 @@ HOMEWORK-ASSISTANCE/
 
 ---
 
-#$ ⚙️ Installation & Setup
+## ⚙️ Installation & Setup
 
 ### 1️⃣ Clone Repository
 
 ```bash
 git clone https://github.com/varsha-reddy18/homework_assistance.git
 cd AI_HOMEWORK-ASSISTANCE
-
+````
 
 ---
 
@@ -282,6 +291,7 @@ For **educational and academic use only**.
 ## ⭐ Acknowledgement
 
 Developed as a **B.Tech Mini Project** to explore the role of AI in education.
+
 
 
 
