@@ -133,69 +133,59 @@ def ask_ai_from_document(question: str, context: str, intent: str = "answer") ->
     """
 
     if intent == "summarize":
-        prompt = f"""You are a helpful study assistant. A student has uploaded a document.
-
-DOCUMENT CONTENT:
-{context}
-
-Task: Write a clear, well-structured summary of this document. Include:
+        prompt = f"""Task: Write a clear, well-structured summary of the following document.
+Include:
 - What the document is about
 - Key topics or sections covered
 - Main points and important details
 
-Summary:"""
-
-    elif intent == "mcq":
-        prompt = f"""You are a helpful study assistant. A student has uploaded a document with questions.
+IMPORTANT: Write the summary in the SAME LANGUAGE as the document text.
 
 DOCUMENT CONTENT:
 {context}
+"""
 
-Task: Find all questions in the document and answer each one clearly and correctly.
+    elif intent == "mcq":
+        prompt = f"""Task: Find all questions in the document below and answer each clearly and correctly.
 For multiple choice questions, identify the correct option and briefly explain why.
 For short answer questions, give a complete answer.
 
-Answers:"""
+IMPORTANT: Provide all answers in the SAME LANGUAGE as the document questions.
+
+DOCUMENT CONTENT:
+{context}
+"""
 
     elif intent == "metadata":
-        prompt = f"""You are a helpful study assistant. A student has uploaded a document.
-
-DOCUMENT CONTENT:
-{context}
-
-Task: Extract and list the document's metadata such as:
-title, author/student name, institution, course, subject, date, department, etc.
+        prompt = f"""Task: Extract and list the document's metadata such as title, author/student name, institution, course, subject, date, department, etc.
 If any field is not found, skip it.
 
-Document Information:"""
+DOCUMENT CONTENT:
+{context}
+"""
 
     elif intent == "list":
-        prompt = f"""You are a helpful study assistant. A student has uploaded a document.
+        prompt = f"""Task: List all the main topics, sections, chapters, or headings found in this document.
+Present them as a numbered list.
+Generate the list in the SAME LANGUAGE as the document text.
 
 DOCUMENT CONTENT:
 {context}
-
-Task: List all the main topics, sections, chapters, or headings found in this document.
-Present them as a numbered list.
-
-Topics:"""
+"""
 
     else:  # "answer" — the most important case
-        prompt = f"""You are a helpful school tutor. A student has uploaded a document and asked a question about it.
+        prompt = f"""STUDENT'S QUESTION: {question}
+
+Instructions:
+- Answer the student's question directly and completely using ONLY information from the document.
+- IMPORTANT: Provide your answer in the EXACT SAME LANGUAGE as the student's question and document text.
+- Do not translate the document text; use terms from the original language.
+- Explain clearly in simple language.
+- If the answer is not in the document, say so clearly.
 
 DOCUMENT CONTENT:
 {context}
-
-STUDENT'S QUESTION: {question}
-
-Instructions:
-- Answer the question directly and completely using information from the document above.
-- If the document contains the answer, explain it clearly in simple language suitable for a student.
-- If the document has relevant formulas, definitions, or examples, include them.
-- If the answer is not in the document, say so clearly and provide a general educational answer.
-- Do NOT just copy-paste text. Explain it properly.
-
-Answer:"""
+"""
 
     response = generate_text(prompt, max_new_tokens=512)
 
@@ -239,6 +229,7 @@ def answer_mcqs_from_document(document_text: str) -> str:
 
         prompt = f"""You are a school exam assistant. Answer this question correctly.
 Give the correct answer with a short explanation (1-2 sentences).
+IMPORTANT: Write your explanation in the SAME LANGUAGE as the question.
 
 {q_block}
 
@@ -299,9 +290,9 @@ def answer_from_document(question: str, document_text: str) -> str:
     # Step 5: Get the most relevant chunks from the document for context
     # For summarize/metadata, use the full document start; for answers, use scored chunks
     if intent in ("summarize", "metadata"):
-        context = document_text[:8000]  # Use up to 8000 chars for full context
+        context = document_text[:1800]  # Use up to 1800 chars for full context
     else:
-        context = get_relevant_chunks(document_text, question, max_chars=6000)
+        context = get_relevant_chunks(document_text, question, max_chars=1600)
 
     # Step 6: Ask the AI to answer using the document content
     answer = ask_ai_from_document(question, context, intent)

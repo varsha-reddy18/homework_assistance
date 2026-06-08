@@ -48,6 +48,7 @@ def _google_translate(text: str, dest: str, src: str = "auto") -> str | None:
 
 def generate_text(prompt: str, max_new_tokens: int = 150) -> str | None:
     try:
+        load_main_model()
         inputs = tokenizer(
             prompt, return_tensors="pt", truncation=True, max_length=512
         ).to(device)
@@ -75,6 +76,7 @@ def generate_text_long(prompt: str) -> str:
       4. Fallback: extract key sentences directly from document text
     """
     try:
+        load_main_model()
         doc_match = re.search(
             r"DOCUMENT TEXT START =====\n(.*?)\n===== DOCUMENT TEXT END",
             prompt, re.DOTALL

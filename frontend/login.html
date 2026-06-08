@@ -1,48 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-
-<title>Login</title>
-
-<link rel="stylesheet" href="css/auth.css">
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - AI Homework Assistant</title>
+  <link rel="stylesheet" href="css/auth.css">
 </head>
 
 <body>
 
-<div class="auth-container">
+  <div class="auth-container">
 
-<h2>🎓Welcome Back!</h2>
+    <h2>🎓Welcome Back!</h2>
+    <p class="subtitle">AI-Powered Homework Assistant</p>
 
-<p class="subtitle">AI-Powered Homework Assistant</p>
+    <div class="input-group">
+      <input id="email" type="email" placeholder="Enter your email" autocomplete="email">
+    </div>
 
+    <div class="input-group">
+      <input id="password" type="password" placeholder="Enter password" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter') login()">
+    </div>
 
-<div class="input-group">
-<input id="email" type="email" placeholder="Enter your email">
-</div>
+    <p id="authError" style="color: #ff4444; font-size: 14px; margin-top: 10px; text-align: center;"></p>
 
+    <button class="auth-btn" onclick="login()">Log In</button>
 
-<div class="input-group">
-<input id="password" type="password" placeholder="Enter password">
-</div>
+    <p class="switch-link">
+      Don't have an account?
+      <a href="signup.html">Sign Up</a>
+    </p>
 
+  </div>
 
-<button class="auth-btn" onclick="login()">Log In</button>
-
-
-<p class="switch-link">
-
-Don't have an account?
-
-<a href="signup.html">Sign Up</a>
-
-</p>
-
-</div>
-
-
-<script src="js/auth.js"></script>
+  <script src="js/auth.js"></script>
 
 </body>
 

@@ -1,10 +1,24 @@
+// Auth guard — redirect to login if not authenticated
+(function checkAuth() {
+  const userId = localStorage.getItem("user_id");
+  if (!userId) {
+    window.location.href = "login.html";
+    return;
+  }
+})();
+
 function loadUser() {
   const user = localStorage.getItem("user_id") || "Student";
-  const userNameEl = document.getElementById("userName");
-  if (userNameEl) userNameEl.innerText = user;
+  // Update the greeting in the topbar
+  const navRight = document.querySelector(".nav-right");
+  if (navRight) {
+    const greetingDiv = navRight.querySelector("div");
+    if (greetingDiv) greetingDiv.innerText = "Hello " + user.split("@")[0] + "!";
+  }
 }
 function logout() {
-  localStorage.clear();
+  localStorage.removeItem("user_id");
+  localStorage.removeItem("access_token");
   window.location.href = "login.html";
 }
 window.addEventListener("load", loadUser);

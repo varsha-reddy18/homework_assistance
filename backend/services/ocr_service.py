@@ -22,7 +22,8 @@ def clean_text(text: str) -> str:
     """
     Clean up messy OCR/PDF extracted text without destroying content.
     """
-    text = re.sub(r'[^\x20-\x7E\n\u0900-\u097F\u0C00-\u0C7F]', ' ', text)
+    # Remove non-printable control characters, but keep all valid unicode text for any language
+    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', ' ', text)
 
     text = re.sub(r'[ \t]+', ' ', text)
 
